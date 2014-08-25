@@ -22,7 +22,7 @@ This platform manages connection between each **"Custom Element Node"** (both Au
 
 ##  Concept
 Basic concept is almost same as [Web Audio Playground](http://webaudioplayground.appspot.com/) by Chris Wilson.  
-Difference is...
+Difference is Web Music Platfrom is supporting...
 
  - supports MIDI(input/output)
  - applied Web Components and Polymer
@@ -46,9 +46,6 @@ Difference is...
 
 ## Copyright
 Copyright (c) 2014 Yamaha Corporation
-
-## Author
-[+ryoyakawai](https://google.com/+ryoyakawai)
 
 
 
