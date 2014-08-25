@@ -1,0 +1,108 @@
+<!--
+Copyright (c) 2014 Yamaha Corporation. All rights reserved.
+Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+-->
+<link rel="import" href="../wm-platform/wm-resourcemanager.html">
+<polymer-element name="wm-39text" extends="wm-resourcemanager">
+  <template>
+    <link rel="stylesheet" href="../../css/reset.css">
+    <link rel="stylesheet" href="../../css/elements.css">
+    <style type="text/css">
+    .outerline {
+      position:relative;
+      width:400px;
+      height:180px;
+      float:left; 
+      margin:0px; 
+      padding:0px; 
+      background-color:#ffffff; 
+      border:0px solid #dddddd; 
+      padding:10px;
+    }
+    h2.title {
+      margin: 0px;
+    }
+    .sendtext {
+      right:15px;
+      float:right;
+    }
+    paper-input.inputtext {
+      font-size:20px;
+      size:10;
+    }
+    paper-button[raisedButton].colored {
+      background: #4285f4;
+      color: #fff;
+    }
+    </style>
+    <script type="text/javascript" src="js/nsx39.js"></script>
+    <div class="outerline">
+      <h2 class="title">Lyrics for NSX39</h2>
+      <paper-input floatingLabel id="inputtext" type="text" class="inputtext" label="Input Lyrics" validate="^[ぁ-ん]*$" error="Input 'HIRAGANA'"></paper-input>
+      <paper-button raisedButton id="sendtext" class="sendtext" disabled="disabled">Send</paper-button>
+    </div>
+  </template>
+  <script type="text/javascript">
+  Polymer('wm-39text', {
+      getComponentSize: function() {
+          return this.super();
+      },
+      enableControl: function() {
+          this.$["sendtext"].removeAttribute("disabled");
+      },
+      disableControl: function() {
+          this.$["sendtext"].setAttribute("disabled", "disabled");
+      },
+      setMIDIAccess: function(access) {
+          this.midi=access;
+      },
+      getInputPort: function() {
+          return this.midiinput;
+      },
+      getOutputPort: function(name) {
+          return this.midioutput;
+      },
+      setMidiDevice: function(device) {
+          this.enableControl();
+          this.tgtype="physical";
+          this.midioutput=device;
+
+          var self=this;
+          this.$["sendtext"].addEventListener("click", function(event){
+              var text=self.$["inputtext"].value;
+              var sysEx=nsx39.getUpdateSysExByText(text.replace(/。/g, "").replace(/ /g, ""), 0, false);
+              self.midioutput.send(sysEx.sysEx, 0);
+          });
+
+      },
+      unsetMidiDevice: function() {
+          this.disableControl();
+          this.midioutput=null;
+
+          this.midioutput=null;
+
+      },
+      sendAllSoundOff: function(midioutput) {
+          this.super([midioutput]);
+      },
+      setIgnoreDragging: function(elems) {
+          this.super([elems]);
+      },
+      publish: {
+      },
+      hello: function() {
+          this.super();
+      },
+      ready: function() {
+          this.setIgnoreDragging([this.$["sendtext"], this.$["inputtext"]]);
+          this.hello();
+
+      },
+      midi: null,
+      defOctave: 2,
+      midioutput:null,
+      tgtype: "phisical",
+
+  });
+  </script>
+</polymer-element>

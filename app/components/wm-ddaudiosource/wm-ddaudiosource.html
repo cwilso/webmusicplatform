@@ -1,0 +1,284 @@
+<!--
+Copyright (c) 2014 Yamaha Corporation. All rights reserved.
+Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+-->
+<link rel="import" href="../wm-platform/wm-resourcemanager.html">
+<polymer-element name="wm-ddaudiosource" extends="wm-resourcemanager" attributes="">
+  <template>
+    <link rel="stylesheet" href="../../css/elements.css">
+    <style type="text/css">
+    .outerline {
+      position:relative; // change conector's z-index to outerline, element, connector
+      float:left; 
+      margin:0px; 
+      padding:10px; 
+      width:215px;
+      height:135px; 
+      background-color:#ffffff; 
+      border-radius:0px; 
+      border:0px solid #dddddd; 
+    }
+    #progress {
+      position:absolute;
+      top:6px;
+      left:130px;
+      opacity:0;
+      transition:0.5s;
+      color:#ffffff;
+    }
+    .top-title {
+      position:absolute;
+      top:0px;
+      left:0px;
+      width:100%;
+      border:0px solid #bbbbbb; 
+      background-color:#6e6e6e; 
+      color:#eeeeee;
+      margin:0px; 
+      padding:5px 0px 5px 0px; 
+      border-radius:0px;
+    }
+    .msg-indicator {
+      position:absolute;
+      top:0px;
+      left:8px;
+      margin:5px 3px 0px 0px;
+      padding:0px;
+      background-color:rgba(221, 221, 221, 1);
+      float:left;
+      width:18px;
+      height:18px;
+      border-radius:50%;
+      transition:0.1s;
+      font-size:10px;
+    }
+    .on {
+      -webkit-animation: indicator 1s linear 0 infinite alternate;
+    }
+    @-webkit-keyframes indicator {
+        0% { background-color: rgba(225, 225, 255, 1); }
+      100% { background-color: rgba(92, 207 ,92, 1); }
+    }
+
+    .outerline {
+      -webkit-perspective: 1000;
+      -moz-perspective: 1000;
+      -o-perspective: 1000;
+      perspective: 1000;
+    }
+    .droparea {
+      margin:10px;
+      border:1px rgba(200, 200, 200, 1) dashed;
+      padding:5px;
+      width:185px; height:50px;
+      display: -webkit-box;
+      transition:0.2s;
+      overflow:hidden;
+    }
+    </style>
+    <div id="xhrdiv" class="outerline" >
+      <span class="top-title"><span style="margin-left:32px;">Audio Input</span></span><span id="progress"></span><br>
+      <div id="msg-indicator" class="msg-indicator"></div>
+      <div id="droparea" class="droparea">
+        <span id="filename"></span>
+      </div>
+      <div style="margin:0px auto;">
+        <button raisedButton id="start" disabled="disabled">START</button>
+        <button raisedButton id="stop" disabled="disabled">STOP</button>
+      </div>
+      <div id="mediaElement"></div>
+    </div>
+  </template>
+  <script type="text/javascript">
+  getUserMedia = navigator.getUserMedia ? 'getUserMedia' :
+                 navigator.webkitGetUserMedia ? 'webkitGetUserMedia' :
+                 navigator.mozGetUserMedia ? 'mozGetUserMedia' :
+                 navigator.msGetUserMedia ? 'msGetUserMedia' :
+                 undefined;
+  Polymer('wm-ddaudiosource', {
+      getComponentSize: function() {
+          return this.super();
+      },
+      enableControl: function() {
+          this.$["start"].removeAttribute("disabled");
+          this.$["stop"].removeAttribute("disabled");
+      },
+      disableControl: function() {
+          this.$["start"].setAttribute("disabled", "disabled");
+          this.$["stop"].setAttribute("disabled", "disabled");
+      },
+      setAudioContext: function(ac) {
+          this.super([ac]);
+          this.gain=this.ac.createGain();
+          this.gain.gain.value=1.0;
+      },
+      connectToNextNode: function(nn){
+          this.setNextNode(nn);
+          this.connectionReady=true;
+          if(this.fileReady==true && this.connectionReady==true) {
+              this.enableControl();
+          }
+      },
+      disconnectFromNextNode: function(){
+          this.connectionReady=false;
+          this.disconnect();
+          this.disableControl();
+          this.nn=[];
+      },
+      getInputNode: function() {
+          return false;
+      },
+      setNextNode: function(nn){
+          this.nn.push(nn);
+      },
+      publish: {
+      },
+      hello: function() {
+          this.super();
+      },
+      setSelfIdName: function(idName) {
+          this.super([idName]);
+      },
+      ready: function() {
+          this.hello();
+          var self=this;
+          var da=this.$["droparea"];
+          da.ondragover=function(event) {
+              event.preventDefault();
+              if(self.isPlaying==true) {
+                  self.$["droparea"].style.setProperty("background-color", "#ff5177"); 
+              } else {
+                  self.$["droparea"].style.setProperty("background-color", "#dddddd"); 
+              }
+          };
+          da.ondragleave=function(event) {
+              event.preventDefault();
+              event.target.style.removeProperty("background-color"); 
+          };
+          da.ondrop=function(event) {
+              event.preventDefault();
+              event.target.style.removeProperty("background-color"); 
+              if(self.isPlaying!=true) {
+                  self.fileList = event.dataTransfer.files;
+                  if( window.FileReader && (self.fileList[0].type.match("audio/*"))) {
+                      self.fileReady=true;
+                      if(self.fileReady==true && self.connectionReady==true) {
+                          self.enableControl();
+                      }
+                      // audio file
+                      self.$["filename"].innerHTML=self.fileList[0].name;
+                  }
+              }
+          };
+
+          this.$["start"].addEventListener("click", function(event){
+              self.isPlaying=true;
+              self.startPlay();
+
+              // sync 
+              self.fire("startPlay", {"targetIdName": self.idName});
+          });
+          this.$["stop"].addEventListener("click", function(event){
+              self.isPlaying=false;
+              self.stopPlay();
+
+              if(self.$["msg-indicator"].classList.contains("on")) {
+                  self.$["msg-indicator"].className=self.$["msg-indicator"].className.replace(" on", "");
+              }
+
+              // sync
+              self.fire("stopPlay", {"targetIdName": self.idName});
+              self.fire("target-element", {"target": event.target});
+          });
+
+      },
+      ac: null, // audioContext
+      nn: [], // nextNode
+      gain:null,
+      source: null,
+      fileList: null,
+      rm: null,
+      isPlaying: false,
+      idName: null,
+      fileReady: false,
+      connectionReady: false,
+      startPlay: function (){
+          if(!this.$["msg-indicator"].classList.contains("on")) {
+              this.$["msg-indicator"].className+=" on";
+          }
+
+          var self=this;
+          var reader= new FileReader();
+          reader.onload=function(event) {
+              self.source=self.ac.createBufferSource();
+              
+              self.ac.decodeAudioData(
+                  event.target.result,
+                  function(buffer) {
+                      self.source.buffer=buffer;
+                      self.source.connect(self.gain);
+                      self.source.loop=false;
+                      for(var i=0; i<self.nn.length; i++) {
+                          self.gain.connect(self.nn[i]);
+                      }
+                      self.source.start(0);
+                  },
+                  function(msg) {
+                      console.log("ERROR: ", msg);
+                  }
+              );
+          };
+          reader.onprogress=this.onProgress.bind(this);
+          reader.readAsArrayBuffer(this.fileList[0]);
+      },
+      stopPlay: function(){
+          if(this.source==null) {
+              return;
+          }
+          this.source.stop(0);
+      },
+      disconnect: function(){
+          this.gain.disconnect();
+          this.stopPlay();
+      },
+/*
+      loadBuffer: function(url) {
+          var xhr=new XMLHttpRequest();
+          xhr.open("GET", url, true);
+          xhr.responseType="arraybuffer";
+          
+          var self=this;
+          xhr.onload=function() {
+              self.ac.decodeAudioData(
+                  xhr.response,
+                  function(buffer) {
+                      self.source.buffer=buffer;
+                      self.source.loop=false;
+                      self.source.start(0);
+                  },
+                  function(msg) {
+                      console.log("ERROR: ", msg);
+                  }
+              );
+          };
+          xhr.onprogress=this.onProgress.bind(self);
+          xhr.onerror=function() {
+              console.log("ERROR: XHR");
+          };
+          xhr.send();
+      },
+*/
+      onProgress: function(event){
+          var prog=Math.round(100*event.loaded/event.total);
+          if(this.$["progress"].style.opacity==0) this.$["progress"].style.opacity=1.0;
+          this.$["progress"].innerHTML=" "+prog+" %";
+          var self=this;
+          if(prog==100) {
+              setTimeout(function(){
+                  self.$["progress"].style.opacity=0;
+              }, 3000);
+          }
+      },
+  });
+  </script>
+</polymer-element>

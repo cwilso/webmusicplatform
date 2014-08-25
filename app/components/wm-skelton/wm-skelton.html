@@ -1,0 +1,223 @@
+<!--
+Copyright (c) 2014 Yamaha Corporation. All rights reserved.
+Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+-->
+
+<!--
+`wm-skelton` は Web Music Platform 上で動作する Custom Element Node を作るときのスケルトンです。<br>
+これを元に作成すると簡単に作成できると思います。<br>
+<br>
+Cusotm Element Node作成後、Web Music Platformで動作させるために`app/components/wm-platform/wm-platform-manifest.json`に以下の項目でエントリーの追加をしてください。
+
+<pre>
+    {
+      "name": "Flatkey",                               // (string)
+      "description": "test",                           // (string)
+      "use": "webmidi",                                // (webaudio/webmidi)
+      "tag_name": "wm-flatkey",                        // (string)
+      "path": "components/wm-flatkey/wm-flatkey.html", // (string)
+      "attributes" : [],                               // (array)[(object), .... ]
+      "node_type":{"input":false, "output":true},      // (object){"input": (boolean), "output": (boolean)} 
+      "allow_fullscreen":false,                        // (boolean)
+      "disp_config_panel": false,                      // (boolean)
+      "disp_in_list": true,                            // (boolean)
+    },
+</pre>
+`name`：Custom Element Nodeの名前（リストの表示名として利用されます） <br>
+`description`：現状は使っていません<br>
+`use` (webaudio/webmidi)：webaudio, webmidi のどちらかを指定してください<br>
+`tag_name`：polymer-elementのnameで指定したタグ名を指定してください<br>
+`path`：追加したディレクトリを指定してください<br>
+`attributes`:：Polymer Elementに対して初期のattributeを指定します<br>
+`node_type` ({"input":true/false, "output":true/false})：Custome Element Node にinput, outputがあるかないかをtrue/falseで指定します<br>
+`allow_fullscreen`(true/false)：Custom Element Node を fullscreen で表示するか否かを指定します<br>
+`disp_config_panel`(true/false)： 定パネルの有無を指定します<br>
+`disp_in_list`(true/false)：リストに表示するか否かを指定します<br>
+
+<br>
+Event、Methodの説明以下の通りです。
+
+@group Web Music Platform
+@element wm-skelton
+@extends wm-resourcemanager
+-->
+                                                               
+<link rel="import" href="../wm-platform/wm-resourcemanager.html">
+<polymer-element name="hogehoge" extends="wm-resourcemanager" attributes="">
+  <template>
+    <style type="text/css">
+    .outerline {
+      position:relative; /* 重要：z-indexの指定はしない */
+      float:left;
+      margin:0px;
+      padding:10px;
+      background-color:#ffffff;
+      border-radius:0px;
+      border:0px solid #dddddd;
+    }
+    <!-- write css inside shdowwom here-->
+    </style>
+    <div id="outerline" class="outerline">
+      <!-- your html here-->
+    </div>
+  </template>
+  <script type="text/javascript">
+  Polymer('hogehoge', {
+      /**
+       * ComponentがLoadされた時に`console.log`でTag名を出力します。 
+       *
+       * @method hello()
+       * @required No
+       */
+      hello: function() {
+          this.super();
+      }
+      /**
+       * Web Music Platform 上に Component を配置（追加）の準備段階で呼ばれます。
+       * Web Music Platform 上に表示されたいサイズを指定してください。|||
+       * `return this.super();` とすれば `{"width":"auto", "height":"auto"}` を返せます。
+       *
+       * @method getComponentSize()
+       * @required Yes
+       * @return {Object} |(|"width":"XXpx", "height":"XXpx"|)| の Format で返してください。
+       */
+      getComponentSize: function() {
+          return this.super();
+      },
+      /**
+       * Web Music Platform 上に Component を配置（追加）と同時に呼ばれます。
+       * AudioContext を自 Component にセットすることを目的とした Method です。
+       * `this.super()` とすると自 Component の `this.ac` にセットできます。
+       *
+       * @method setAudioContext(ac)
+       * @required Yes
+       * @param nn {Object} 
+       */
+      setAudioContext: function(ac) {
+          this.super([ac]);
+      },
+      /**
+       * Web Music Platform 上で自 Component の Output が他 Component と接続するときに呼ばれます。
+       * 接続する次 Component の入力 Node (Begininig-Node) を取得できるので自 Component の Output（End-Node）と接続してください。
+       * 
+       * @method connectToNextNode(nn)
+       * @required Yes
+       * @param nn {Object} 
+       */
+      connectToNextNode: function(nn){
+      },
+      /**
+       * 接続している次 Component と自 Component を切断するときに呼ばれます。
+       * 自 Component と接続されていた Component を切断してください。
+       *
+       * @method disconnectFromNextNode
+       * @required Yes
+       */
+      disconnectFromNextNode: function(){
+      },
+      /**
+       * 自 Component に 他 Component との接続要求があった時に呼ばれます。
+       * 自 Component の入力 Node(Begining-Node)を返してください。
+       *
+       * @method getInputNode()
+       * @required Yes
+       * @param nn {Object} 
+       * @return {Object}  
+       */
+      getInputNode: function() {
+      },
+      /**
+       * 自 Component と次 Component が接続された（自分 Input の接続時）時に呼ばれます。
+       * 他 Component との接続をしてない状態では UI を無効にしたい場合に使います。
+       * （不要な場合、 Method 内を空白にしてください）
+       *
+       * @method enableControl()
+       * @required Yes
+       */
+      enableControl: function() {
+      },
+      /**
+       * 自 Component と前 Component が切断された（自分 Output の切断時）時に呼ばれます。
+       * 他 Component との接続をしてない状態では UI を無効にしたい場合に使います。
+       * （不要な場合、 Method 内を空白にしてください）
+       *
+       * @method disableControl()
+       * @required Yes
+       */
+      disableControl: function() {
+      },
+      /**
+       * NO (Component をフルスクリーンを有効にしている場合のみに必要)
+       *
+       * @method setSize(event)
+       * @required No
+       * @param event.detail.size {String} フルスクリーン時："full"、フルスクリーン解除時："single"
+       * @param event.detail.innerWidth {String} フルスクリーン時のスクリーンの幅が指定されます。
+       * @param event.detail.innerHeight {String} フルスクリーン時のスクリーンの高さが指定されます。
+       */
+      setSize: function() {
+      },
+      /**
+       * DOM Element を指定して、その Element 上の Drag 操作での Component の移動が中止されます。
+       * (Component 内に Drag で操作をしたいエレメント(スライダー等)がある場合に指定してください。)
+       *
+       * @method setIgnoreDragging([elems])
+       * @required No
+       * @param elems {Array} (例：elems=[elemA, elemB, ...]) 
+       */
+      setIgnoreDragging: function([elems]){
+      },
+      /**
+       * 自 Component の ID 名を Object にセットします。
+       *
+       * @method setSelfIdName(idName)
+       * @required No
+       * @param idName {String} 
+       */
+      setSelfIdName: function(idName) {
+      },
+      ready: function(){
+
+      },
+  });
+  </script>
+</polymer>
+
+<!--                                                                                                                                                                     
+Master Node (例：AudioBufferSourceNode, MediaElementAudioSourceNode, MediaStreamAudioSourceNode) が Start/Stop するときに発火されます。
+例えば、Analyserの動作を MasterNode と同期させたい場合に使います。
+
+注：ready 内に設置してください。
+
+例：
+<code>
+<pre>
+if(event.detail.slaves.contains(self.idName+"_p")) {
+    // 自componentを開始するMethod
+    self.start.bind(self)();　
+}
+</pre>
+</code>
+
+@event <Listen> masterStart, masterStop
+@param {Object} detail
+@param {boolean} detail.isSelected true for selection and false for deselection
+@param {Object} detail.item the item element
+-->
+
+<!--
+Component のサイズを変更し接続点が変化した場合にこの Event を Fire することで、接続点と接続線を動かすことができます。
+
+注：ready 内に設置してください。
+
+例：
+<code>
+<pre>
+self.fire("updated-connectorPosMove", {"id":self.idName});
+</pre>
+</code>
+
+@event <fire> updated-connectorPosMove
+@param {Object} id
+-->
+

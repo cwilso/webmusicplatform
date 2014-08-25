@@ -1,0 +1,210 @@
+<!--
+Copyright (c) 2014 Yamaha Corporation. All rights reserved.
+Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+-->
+<link rel="import" href="../wm-platform/wm-resourcemanager.html">
+<polymer-element name="wm-stereoingicator" extends="wm-resourcemanager" attributes="destination">
+  <template>
+    <style type="text/css">
+    .outerline {
+      width:140px;
+      height:29px;
+      border:0px solid rgba(0, 0, 0, 1);
+      padding:0px;
+      background-color:rgba(255, 255, 255, 1);
+/*
+      -webkit-transform: rotate(-90deg);
+      -moz-transform: rotate(-90deg);
+*/
+    }
+    .outerline.vertical {
+      -webkit-transform: rotate(-90deg);
+      -moz-transform: rotate(-90deg);
+    }
+    .audiometer-L {
+      position:relative;
+      clear:both;
+      top:1px;
+    }
+    .audiometer-R {
+      position:relative;
+      clear:both;
+      top:-1px;
+    }
+    .led {
+      float:left;
+      width:6px;
+      height:14px;
+      border:1px solid #37474f;
+      margin:0px 0px 0px 0px;
+      background-color:#263238;
+      transition:0.2s;
+      margin-left:-1px
+    }
+    .c0.on { background-color:#72d572; }
+    .c1.on { background-color:#fff176; }
+    .c2.on { background-color:#f36c60; }
+    .c3.on { background-color:#ff3d00; }
+    </style>
+    <div id="outerline" class="outerline">
+      <div class="audiometer-L">
+        <div id="l1" class="led c0"></div>
+        <div id="l2" class="led c0"></div>
+        <div id="l3" class="led c0"></div>
+        <div id="l4" class="led c0"></div>
+        <div id="l5" class="led c0"></div>
+        <div id="l6" class="led c0"></div>
+        <div id="l7" class="led c0"></div>
+        <div id="l8" class="led c0"></div>
+        <div id="l9" class="led c0"></div>
+        <div id="l10" class="led c0"></div>
+        <div id="l11" class="led c0"></div>
+        <div id="l12" class="led c1"></div>
+        <div id="l13" class="led c1"></div>
+        <div id="l14" class="led c1"></div>
+        <div id="l15" class="led c1"></div>
+        <div id="l16" class="led c2"></div>
+        <div id="l17" class="led c2"></div>
+        <div id="l18" class="led c2"></div>
+        <div id="l19" class="led c3"></div>
+        <div id="l20" class="led c3"></div>
+      </div>
+      <div class="audiometer-R" style="top:-1px;">
+        <div id="r1" class="led c0"></div>
+        <div id="r2" class="led c0"></div>
+        <div id="r3" class="led c0"></div>
+        <div id="r4" class="led c0"></div>
+        <div id="r5" class="led c0"></div>
+        <div id="r6" class="led c0"></div>
+        <div id="r7" class="led c0"></div>
+        <div id="r8" class="led c0"></div>
+        <div id="r9" class="led c0"></div>
+        <div id="r10" class="led c0"></div>
+        <div id="r11" class="led c0"></div>
+        <div id="r12" class="led c1"></div>
+        <div id="r13" class="led c1"></div>
+        <div id="r14" class="led c1"></div>
+        <div id="r15" class="led c1"></div>
+        <div id="r16" class="led c2"></div>
+        <div id="r17" class="led c2"></div>
+        <div id="r18" class="led c2"></div>
+        <div id="r19" class="led c3"></div>
+        <div id="r20" class="led c3"></div>
+      </div>
+    </div>
+  </template>
+  <script type="text/javascript">
+  Polymer('wm-stereoingicator', {
+      getComponentSize: function() {
+          return this.super();
+      },
+      setAudioContext: function(ac) {
+          this.super([ac]);
+          if(this.analyserL==null || this.analyserR==null) {
+              this.gain=this.ac.createGain();
+              this.splitter = this.ac.createChannelSplitter(2);
+              this.merger = this.ac.createChannelMerger(2);
+              this.analyserL=this.ac.createAnalyser();
+              this.analyserR=this.ac.createAnalyser();
+              this.analyserL.smoothingTimeConstant = 0.3;
+              this.analyserR.smoothingTimeConstant = 0.3;
+
+              this.gain.connect(this.splitter);
+              this.splitter.connect(this.analyserL, 0, 0);
+              this.splitter.connect(this.analyserR, 1, 0);
+              this.analyserL.connect(this.merger, 0, 0);
+              this.analyserR.connect(this.merger, 0, 1);
+          }
+      },
+      toggleFormation: function(){
+          if(this.$["outerline"].classList.contains("vertical")) {
+              this.$["outerline"].className=this.$["outerline"].className.replace(" vertical", "");
+          } else {
+              this.$["outerline"].className+=" vertical";
+          }
+
+      },
+      connectToNextNode: function(nn){
+          this.merger.connect(nn);
+      },
+      disconnectFromNextNode: function(){
+          this.merger.disconnect();
+      },
+      getInputNode: function() { 
+          return this.gain;
+      },
+      ready: function(){
+          this.hello();
+          var self=this;
+          document.addEventListener("masterStart", function(event){
+              if(event.detail.slaves.contains(self.idName+"_p")) {
+                  self.startDraw();
+              }
+          });
+          document.addEventListener("masterStop", function(event){
+              if(event.detail.slaves.contains(self.idName+"_p")) {
+                  self.stopDraw();
+                  self.toggleOnOff(0, 0);
+              }
+          });
+
+      },
+      hello: function() {
+          this.super();
+      },
+      analyser:null,
+      timerId:null,
+      splitter:null,
+      merger:null,
+      startDraw: function() {
+          this.spectrumAnalyse();
+          this.timerId=requestAnimationFrame(this.startDraw.bind(this));
+      },
+      stopDraw: function() {
+          cancelAnimationFrame(this.timerId);
+      },
+      spectrumAnalyse: function() {
+          var sum=0, max=0;
+          var timeDomainData = new Uint8Array(this.analyserL.frequencyBinCount);
+          this.analyserL.getByteTimeDomainData(timeDomainData);
+          this.variables={"opacity":[], "rotate":[]};
+          max=Math.max.apply({}, timeDomainData);
+          var lRms=Math.round(20*((max/128)-1));
+          
+          var sum=0, max=0;
+          var timeDomainData = new Uint8Array(this.analyserR.frequencyBinCount);
+          this.analyserR.getByteTimeDomainData(timeDomainData);
+          max=Math.max.apply({}, timeDomainData);
+          var rRms=Math.round(20*(max/128-1));
+
+          this.toggleOnOff(lRms, rRms);
+      },
+      toggleOnOff: function(val_l, val_r) {
+          for(var i=1; i<=20; i++) {
+              this.$["l"+i].className=this.$["l"+i].className.replace(" on", "");
+              this.$["r"+i].className=this.$["r"+i].className.replace(" on", "");
+          }
+          var i=1, self=this;
+          while(i<=val_l) {
+              var el=self.$["l"+i];
+              if(el.classList.contains("on")) {
+                 el.className=el.className.replace(" on", "");
+              } else {
+                  el.className+=" on";
+              }
+              i++;
+          }
+          var i=1;
+          while(i<=val_r) {
+              var er=self.$["r"+i];
+              if(er.classList.contains("on")) {
+                 er.className=er.className.replace(" on", "");
+              } else {
+                  er.className+=" on";
+              }
+              i++;
+          }
+      },
+  });
+  </script>
+</polymer>

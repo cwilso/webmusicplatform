@@ -1,0 +1,1386 @@
+<!--
+Copyright (c) 2014 Yamaha Corporation. All rights reserved.
+Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+-->
+<link rel="import" href="wm-resourcemanager.html">
+<polymer-element name="wm-platform" extends="wm-resourcemanager" attributes="workarea_name dst_ext">
+  <template>
+    <link rel="stylesheet" href="../../css/reset.css">
+    <link rel="stylesheet" href="../../css/elements.css">
+  </template>
+  <script type="text/javascript" src="wm-platform-manifest.json"></script>
+  <script type="text/javascript">
+  Polymer('wm-platform', {
+      lineGradTimerId: 0,
+      getPluginsList: function(idx) {
+          var out=this.manifest.plugins;
+          if(typeof idx!="undefined") {
+              out=this.manifest.plugins[idx];
+          }
+          return out;
+      },
+      getComponents: function() {
+          return this.components;
+      },
+      publish: {
+      },
+      ready: function() {
+          // when window size changed 
+          var self=this;
+          window.onresize=function(event) {
+              self.fire("updated-connectorPosMove", {"id":"destination"});
+          };
+
+          document.addEventListener("updated-connectorPosMove", function(event){
+              var tid=event.detail.id;
+              if(!tid.match(/_p$/)) {
+                  tid=tid+"_p";
+              }
+              var dst=document.getElementById(tid);
+              var e={};
+              e.target=dst;
+              e.classList=dst.clssList;
+              e.preventDefault=function(){};
+              self.onConnectorPosMove.bind(self)(e);
+          });
+
+          // ignore dragging when dragging controllable element
+          document.addEventListener("ignoreDragging", function(event){
+              self.ignoreDragging=event.detail.status;
+          });
+
+          // when source start
+          document.addEventListener("startPlay", function(event){
+              var ids=getSlaveNodes.bind(self)(event);
+              self.fire("masterStart", {"slaves":ids});
+              
+              // stop Gradation before start
+              clearInterval(self.lineGradTimerId);
+
+              // start changing line color
+              var lines=[];
+              lines=getLineDOM(ids);
+              var count=0;
+              self.lineGradTimerId=setInterval(function(){
+                  count++;
+                  ctype=2;
+                  if(count%2==0) {
+                      ctype=1;
+                  }
+                  ctype="url(#wal_b_"+ctype+")";
+                  changeLineColor(lines, ctype);
+                  if(count>=10) count=0;
+              }, 300);
+              
+          });
+          // when source stop
+          document.addEventListener("stopPlay", function(event){
+              var ids=getSlaveNodes.bind(self)(event);
+              self.fire("masterStop", {"slaves":ids});
+
+              // stop changing line color
+              clearInterval(self.lineGradTimerId);
+              var lines=[];
+              lines=getLineDOM(ids);
+              ctype="url(#wal_b_0)";
+              changeLineColor(lines, ctype);
+          });
+
+          // change line color
+          function getLineDOM(ids) {
+              var out=[];
+              for(var i=0; i<ids.length; i++) {
+                  out=out.concat(getPathFromObj(document.getElementById(ids[i])));
+                  out=out.concat(getPathFromObj(document.getElementById(ids[i])));
+              }
+              return out;
+          }
+          function changeLineColor(lines, ctype) {
+              for(var i=0; i<lines.length; i++) {
+                  if(typeof lines[i] != "undefined") {
+                      lines[i].setAttribute("stroke", ctype);
+                  }
+              }
+          }
+          function getPathFromObj(elem) {
+              if(elem==null) return;
+              var out=[];
+              var cons=elem.inputConnections;
+              if(typeof cons!="undefined") {
+                  for(var i=0; i<cons.length; i++) {
+                      out.push(cons[i].line);
+                  }
+              }
+              var cons=elem.outputConnections;
+              if(typeof cons!="undefined") {
+                  for(var i=0; i<cons.length; i++) {
+                      out.push(cons[i].line);
+                  }
+              }
+              return out;
+          }
+
+          // getting nodes from DOM
+          function getSlaveNodes(event) {
+              var ids=[];
+              for(var i=0; i<self.components.length; i++) {
+                  if(event.detail.targetIdName==self.components[i].idName) {
+                      var out=getNextNodeFormOutput(self.components[i].idNameP);
+                  }
+              }
+              for(var i=0; i<this.dst_ext.length; i++) {
+                  ids.push(this.dst_ext[i]+"_p");
+              }
+              return ids;
+
+              function getNextNodeFormOutput(id) {
+                  var elem=document.getElementById(id);
+                  if(typeof elem.outputConnections=="undefined") {
+                      return;
+                  } else {
+                      for(var i=0; i<elem.outputConnections.length; i++) {
+                          ids.push(elem.outputConnections[i].destination.id);
+                          if(elem.outputConnections[i].destination.id!="destination_p") {
+                               getNextNodeFormOutput(elem.outputConnections[i].destination.id);
+                          } else {
+                              return;
+                          }
+                      }
+                  }
+              }
+          }
+
+          
+          // add components
+          this.manifest=manifest;
+          for(var i=0, pli=this.manifest.plugins; i<pli.length; i++){
+              var el=document.createElement("link");
+              el.rel="import";
+              el.href=pli[i].path;
+              document.head.appendChild(el);
+          }
+
+          this.workareaName=this.workarea_name;
+
+          this.ac = window.AudioContext ? new window.AudioContext() :
+                    window.webkitAudioContext ? new window.webkitAudioContext() :
+                    window.mozAudioContext ? new window.mozAudioContext() :
+                    window.msAudioContext ? new window.msAudioContext() :
+                    undefined;
+
+          audioContext=this.ac;
+          if(navigator.requestMIDIAccess) {
+              navigator.requestMIDIAccess({sysex:true}).then(scb.bind(this), ecb.bind(this));
+              var self=this;
+              function scb(access) {
+                  self.midi={
+                      "access": access,
+                      "inputs": access.inputs(),
+                      "outputs": access.outputs()
+                  }
+                  midi=self.midi;
+              }
+              function ecb(msg){
+                  console.error("Error occur during grabbing MIDI Devices.");
+              }
+          }
+
+          // add destination extention
+          if(this.dst_ext!=null) {
+              this.dst_ext=this.dst_ext.split(":");
+              var self=this;
+              setTimeout(function(){
+                  self.setDestinationExtention(self.dst_ext);
+              }, 2000);
+          }
+
+
+          function addClassName(idName, className) {
+              var elem=document.getElementById(idName);
+              elem.className=elem.className.replace(className, "") + " " + className;
+          }
+          function removeClassName(idName, className) {
+              var elem=document.getElementById(idName);
+              elem.className=elem.className.replace(className, "");
+          }
+      },
+      // add destination extention
+      setDestinationExtention: function(dst_ext) {
+          if(dst_ext.length==0) {
+              this.webAudioDestination=this.ac.destination;
+          } else {
+              var self=this;
+              var de=document.getElementById(dst_ext[0]);
+              de.setAudioContext(this.ac);
+              de.connectToNextNode(this.ac.destination);
+              //de.toggleFormation();
+              de.idName=dst_ext[0];
+              this.webAudioDestination=de.getInputNode();
+          }
+      },
+      ac: null, // audioContext
+      midi: false, // midi access
+      workareaName: null,
+      components:[],
+      dragObj: { "zIndex": 0, "lastLit":null },
+      connectorDiameter:34,
+      componentPos:{"top":80, "left":40},
+      clickedTagName:null,
+      dst_ext:null,
+      audioDestination:null,
+      ignoreDragging:false,
+      fullScreen:{},
+      addComponent: function(manifest, elem) {
+          var name=manifest.tag_name;
+          var idx=this.components.length;
+          var c={
+              "Idx": idx,
+              "idNameP": name+"_"+idx + "_p",
+              "idName": name+"_"+idx,
+              "pName": name,
+              "idComponent": name+"_"+idx, // component Id
+              "obj": elem,
+              "use": manifest.use,
+              "connections" : {
+                  "input":[],
+                  "output":[]
+              }
+          };
+
+          var self=this;
+          var cSize=elem.getComponentSize(); // component size
+
+          // set SelfIdName
+          elem.setSelfIdName(c.idComponent);
+
+          // parent element
+          var divP=document.createElement("div");
+          divP.id=c.idNameP;
+          divP.className="elementwindow-flat "+c.use;
+          divP.style.setProperty("background-color", "rgba(0, 0, 0, 1)");   
+          divP.style.setProperty("opacity", "0");   
+
+          //divP.style.setProperty("-webkit-box-shadow", "rgba(0, 0, 0, 0.1) 0px 2px 10px 5px");
+
+          divP.style.setProperty("top", this.componentPos.top+"px" );   
+          divP.style.setProperty("left", this.componentPos.left+"px");
+
+          if(!isNaN(parseInt(cSize.width, 10))) {
+              divP.style.setProperty("width", cSize.width+"px");
+          }
+          if(!isNaN(parseInt(cSize.height, 10))) {
+              divP.style.setProperty("height", cSize.height+"px");
+          }
+
+
+          // delete button
+          var clb=document.createElement("button");
+          clb.className="close-button";
+          clb.id=c.idName+"_cb";
+          var icon=document.createElement("core-icon");
+          icon.setAttribute("icon", "close");
+          icon.size="18";
+          icon.style.setProperty("fill", "#dddddd");
+          clb.appendChild(icon);
+
+          if(manifest.allow_fullscreen) {
+              // fullscreen button
+              var fsb=document.createElement("button");
+              fsb.className="fullscreen-button";
+              fsb.id=c.idName+"_fs";
+              var icon=document.createElement("core-icon");
+              icon.id=c.idName+"_fullscreen-ctrl";
+              icon.setAttribute("icon", "fullscreen");
+              icon.size="18";
+              icon.style.setProperty("fill", "#dddddd");
+              fsb.appendChild(icon);
+          }
+
+          //paper-shadow
+          var ppsd=document.createElement("paper-shadow");
+
+          // connector input
+          var ctri=document.createElement("div");
+          ctri.id=c.idName+"_node_input";
+          ctri.className="node input node-input "+c.use;
+          ctri.style.setProperty("position", "absolute");
+          var ctrin=document.createElement("span");
+          ctrin.className="node-button";
+          ctrin.innerHTML="&nbsp;";
+          //ctrin.innerHTML="<core-icon icon=\"hardware:keyboard-arrow-up\" size=\"30\"></core-icon>";
+          ctrin.id="connector_input_"+idx;
+          ctri.appendChild(ctrin);
+          if(manifest.use.toLowerCase()=="webaudio") {
+              ctri.style.setProperty("bottom", "-3px");
+              ctri.style.setProperty("left", "-12px");
+          }
+          if(manifest.use.toLowerCase()=="webmidi") {
+              ctri.style.setProperty("bottom", "-9px");
+              ctri.style.setProperty("left", "-12px");
+              ctrin.style.setProperty("background-color", "white");
+          }
+
+          if(manifest.node_type.input) {
+              // connect component: input
+              ctri.addEventListener("pointerdown", function(event){
+                  self.startDraggingConnector.bind(self)(event);
+              }, true);
+          } else {
+              ctri.style.setProperty("visibility", "hidden");
+          }
+          ppsd.appendChild(ctri);
+
+          // connector output
+          var ctro=document.createElement("div");
+          ctro.id=c.idName+"_node_output";
+          ctro.className="node output node-output "+c.use;
+          ctro.style.setProperty("position", "absolute");
+          var ctron=document.createElement("span");
+          ctron.className="node-button";
+          ctron.innerHTML="&nbsp;";
+          //ctron.innerHTML="<core-icon icon=\"hardware:keyboard-arrow-down\" size=\"30\"></core-icon>";
+          ctron.id="connector_output_"+idx;
+          ctro.appendChild(ctron);
+
+          if(manifest.use.toLowerCase()=="webaudio") {
+              ctro.style.setProperty("bottom", "-3px");
+              ctro.style.setProperty("right", "-12px");
+          }
+          if(manifest.use.toLowerCase()=="webmidi") {
+              ctro.style.setProperty("bottom", "-9px");
+              ctro.style.setProperty("right", "-20px");
+              ctron.style.setProperty("background-color", "white");
+          }
+          
+          if(manifest.node_type.output) {
+              // connect component: output
+              ctro.addEventListener("pointerdown", function(event){
+                  self.startDraggingConnector.bind(self)(event);
+              }, true);
+          } else {
+              ctro.style.setProperty("visibility", "hidden");
+          }
+
+          if(manifest.disp_config_panel && typeof elem.getConfigPanel!="undefined") {
+              var mdiv=document.createElement("div");
+              mdiv.className="menu-config-vert";
+              mdiv.id=c.idName+"_config_panel_button";
+
+              var mppsd=document.createElement("paper-shadow");
+              mppsd.setAttribute("hasPosition", "true");
+              mppsd.setAttribute("z", "1");
+          
+              var pib=document.createElement("paper-icon-button");
+              pib.icon="more-vert";
+              pib.className="fill menu-config";
+
+              var mdivbd=document.createElement("div");
+              mdivbd.className="config-body";
+              mdivbd.className+=" card paper-shadow-top paper-shadow-top-z-1 card-inner paper-shadow-bottom paper-shadow-bottom-z-1";
+              mdivbd.id=c.idName+"_config_panel_body";
+              mdivbd.style.setProperty("left", "0px");
+              mdivbd.style.setProperty("width", "0px");
+              mdivbd.style.setProperty("height", "0px");
+              mdivbd.style.setProperty("margin", "0px");
+              mdivbd.style.setProperty("padding", "0px");
+              var cinnersd=document.createElement("div");
+              cinnersd.className="card-inner paper-shadow-bottom paper-shadow-bottom-z-1";
+              
+              mdiv.appendChild(mppsd);
+              mdiv.appendChild(pib);
+
+              mdivbd.appendChild(mdiv);
+
+              divP.appendChild(mdivbd); // config drawer
+
+              // set Config Panel
+              celem=elem.getConfigPanel();
+              celem.id=mdivbd.id+"_content";
+              celem.className="config-body-content";
+              celem.style.setProperty("overflow", "auto");
+              mdivbd.appendChild(celem);
+
+              mdiv.addEventListener("click", function(event){
+                  var size={"x":"400px", "y":"400px"};
+                  var mbody=event.target.parentNode.parentNode;
+                  var cmbody=document.getElementById(mbody.id+"_content");
+                  if(parseInt(mbody.style.width)==0 && parseInt(mbody.style.height)==0) {
+                      event.target.style.setProperty("z-index", "0");
+                      event.target.parentNode.style.setProperty("left", "-32px");
+                      setTimeout(function(){
+                          cmbody.style.setProperty("opacity", "0.99");
+                      }, 250);
+                      setTimeout(function(){
+                          mbody.style.setProperty("width", size.x);
+                          mbody.style.setProperty("height", size.y);
+                          mbody.style.setProperty("z-index", "99999999");
+                          cmbody.style.setProperty("z-index", "99999998");
+                          cmbody.style.setProperty("height", size.x);
+                          cmbody.style.setProperty("width", size.y);
+                      }, 100);
+                  } else {
+                      cmbody.style.setProperty("opacity", "0.0");
+                      cmbody.style.removeProperty("z-index");
+                      setTimeout(function(){
+                          mbody.style.setProperty("width", "0px"); 
+                          mbody.style.setProperty("height", "0px");
+                          mbody.style.removeProperty("z-index");
+                          cmbody.style.setProperty("height", "0px");
+                          cmbody.style.setProperty("width", "0px");
+                      }, 180);
+                      setTimeout(function(){
+                          event.target.parentNode.style.setProperty("left", "-25px");
+                      }, 380);
+                  }
+              });
+          }
+
+          elem.id=c.idComponent;
+          divEl=document.createElement("paper-shadow");
+          divEl.appendChild(clb);
+          divEl.appendChild(elem);
+
+          divP.appendChild(divEl);
+
+          divP.appendChild(ctro);
+          divP.appendChild(ctri);
+          if(typeof fsb != "undefined") divP.appendChild(fsb);
+          if(typeof flb != "undefined") divP.appendChild(flb);
+
+          divP.appendChild(clb);
+
+          setTimeout(function(){
+              divP.style.setProperty("opacity", "1.0");
+              setTimeout(function(){
+                  divP.style.setProperty("transition", "0s");
+              },300);
+          },1);
+
+
+          // set AudioContext
+          if(manifest.use.toLowerCase()=="webaudio") {
+              elem.setAudioContext(this.ac);
+              divP.audioNode=elem;
+          }
+          if(manifest.use.toLowerCase()=="webmidi") {
+              elem.setMIDIAccess(this.midi);
+              divP.midiAccess=elem;
+          }
+
+          // add component to component List
+          this.components.push(c);
+
+
+          // add Node
+          document.getElementById(this.workareaName).appendChild(divP);
+
+
+          // next component position          
+          this.componentPos.left+=250;
+          if(this.componentPos.left>600) {
+              this.componentPos.left=20;
+              this.componentPos.top+=250;
+              if(this.componentPos.top>400) this.componentPos.top=30;
+          }
+
+          var self=this;
+
+          // drag component
+          //divC.addEventListener("pointerdown", function(event){
+          divP.addEventListener("pointerdown", function(event){
+              //console.log("[divP event] ", event);
+              self.startDraggingNode.bind(self)(event);
+          }, true);
+
+
+          // fullScreen Node/Module
+          if(typeof fsb!="undefined") fsb.addEventListener("pointerdown", fullscreenModule.bind(this), false);
+
+          // fullscreen Node/Module
+          function fullscreenModule(event) {
+	            var moduleElement = event.target.parentNode;
+              if(moduleElement.tagName=="BUTTON") {
+	                moduleElement = moduleElement.parentNode;
+              }
+              if(!moduleElement.classList.contains("fullscreenSize")) {
+                  moduleElement.webkitRequestFullScreen();
+                  moduleElement.className+=" fullscreenSize";
+              } else {
+                  document.webkitCancelFullScreen();
+                  moduleElement.className=moduleElement.className.replace("fullscreenSize", "");
+              }
+              event.preventDefault();
+              event.stopPropagation();
+          }
+          document.addEventListener("webkitfullscreenchange", handleFSevent.bind(this), false);
+          function handleFSevent(event) {
+              console.log(event);
+              var elem=document.getElementById(event.target.id);
+              if( (document.webkitFullscreenElement && document.webkitFullscreenElement != null) ) {
+                  if(!elem.classList.contains("fullscreenSize")) elem.className+=" fullscreenSize";
+                  if(typeof this.fullScreen.top =="undefined") {
+                      this.fullScreen={
+                          "top": elem.style.top.replace("px", ""),
+                          "left": elem.style.left.replace("px", ""),
+                          "border": elem.style.border
+                      };
+                  }
+
+                  elem.style.setProperty("top", "0px");
+                  elem.style.setProperty("left", "0px");
+                  elem.style.setProperty("border", "1px black solid");
+                  var self=this;
+                  setTimeout(function() {
+                      event.detail={
+                          "size":"full", 
+                          "innerWidth":window.innerWidth, 
+                          "innerHeight":window.innerHeight
+                      };
+                      // call setSize to tell component to be full
+                      document.getElementById(event.target.id.replace("_p", "")).setSize(event);
+
+                      // change icon to fullscreen-exit
+                      var ic=document.getElementById(event.target.id.replace("_p", "_fullscreen-ctrl"));
+                      ic.icon+="-exit";
+                      
+                      //// hide exit fullscreen button
+                      //var cb=document.getElementById(event.target.id.replace("_p", "_fullscreen-ctrl"));
+                      //cb.style.setProperty("display", "none");
+
+                      // hide close button
+                      var cb=document.getElementById(event.target.id.replace("_p", "_cb"));
+                      cb.style.setProperty("display", "none");
+
+
+                      // hide input/output node
+                      var ni=document.getElementById(event.target.id.replace("_p", "_node_input"));
+                      ni.style.setProperty("display", "none");
+                      var no=document.getElementById(event.target.id.replace("_p", "_node_output"));
+                      no.style.setProperty("display", "none");
+
+                      // hide config panel button
+                      var cfgp=document.getElementById(event.target.id.replace("_p", "_config_panel_button"));
+                      if(cfgp) {
+                          cfgp.style.setProperty("display", "none");
+                      }
+
+                      // update z-index of humberger icon
+                      var mh=document.querySelector(".menu-sidedrawer-humberger");
+                      mh.style.setProperty("z-index", 0);
+
+                      // update connection line
+                      self.fire("updated-connectorPosMove", {"id":"destination"});
+                  }, 600);
+              }else{
+                  elem.className=elem.className.replace("fullscreenSize", "");
+                  event.target.value=1;
+
+                  event.detail={
+                      "size":"single", 
+                  };
+
+                  document.getElementById(event.target.id.replace("_p", "")).setSize(event);
+                  elem.style.setProperty("top", this.fullScreen.top+"px");
+                  elem.style.setProperty("left", this.fullScreen.left+"px");
+                  elem.style.removeProperty("border");
+
+                  // back icon to fullscreen
+                  var ic=document.getElementById(event.target.id.replace("_p", "_fullscreen-ctrl"));
+                  ic.icon=ic.icon.replace("-exit", "");
+
+                  //// back fullscreen button
+                  //var cb=document.getElementById(event.target.id.replace("_p", "_fullscreen-ctrl"));
+                  //cb.style.removeProperty("display");
+
+                  // back config panel button
+                  var cfgp=document.getElementById(event.target.id.replace("_p", "_config_panel_button"));
+                  if(cfgp) {
+                      cfgp.style.removeProperty("display");
+                  }
+
+                  // hide input/output node
+                  var ni=document.getElementById(event.target.id.replace("_p", "_node_input"));
+                  ni.style.removeProperty("display");
+                  var no=document.getElementById(event.target.id.replace("_p", "_node_output"));
+                  no.style.removeProperty("display");
+
+                  // re-activate close button
+                  var cb=document.getElementById(event.target.id.replace("_p", "_cb"));
+                  cb.style.removeProperty("display");
+
+                  // update z-index of humberger icon
+                  var mh=document.querySelector(".menu-sidedrawer-humberger");
+                  mh.style.setProperty("z-index", 9999999997);
+
+                  // update connection line
+                  this.fire("updated-connectorPosMove", {"id":"destination"});
+                  this.fullScreen={};
+              }
+              event.preventDefault();
+              event.stopPropagation();
+          }
+          
+          // flip Module
+          //if(typeof fsb!="undefined") fsb.addEventListener("pointerdown", hoge.bind(this), false);
+          // flip
+
+
+          // delete Node/Module
+          clb.addEventListener("pointerdown", deleteModule.bind(this), false);
+          clb.addEventListener("mousedown", deleteModule.bind(this), false);
+
+          // delete Node/Module
+          function  deleteModule(event) {
+	            var moduleElement = event.target.parentNode;
+              if(moduleElement.tagName=="BUTTON") {
+	                moduleElement = moduleElement.parentNode;
+              }
+              //console.log("[deleteModule]", moduleElement.tagName);
+
+              // 1st delete connection between nodes.
+              if(moduleElement.classList.contains("webaudio")) {
+                  var nodeElement=this.dragObj.elNode;
+                  //console.log("[delete web audio] ", nodeElement, nodeElement.outputConnections, nodeElement.inputConnections);
+	                disconnectNode.bind(this)( moduleElement );
+              } 
+              if(moduleElement.classList.contains("webmidi")) {
+                  //console.log("delete web midi");
+	                disconnectNode.bind(this)( moduleElement );
+              }
+
+	            // Then delete the visual element
+              moduleElement.style.setProperty("transition", "0.3s");
+              setTimeout(function(){
+                  moduleElement.style.setProperty("opacity", "0");
+                  setTimeout(function(){
+	                    moduleElement.parentNode.removeChild( moduleElement );
+                  },300);
+              },1);
+              
+              // delete components from list of components[]
+              for(var i=0; i<this.components.length; i++) {
+                  if(this.components[i].idName==moduleElement.id.replace("_p", "")) {
+                      this.components.splice(i, 1);
+                  }
+              }
+
+              event.preventDefault();
+              event.stopPropagation();
+
+          }
+
+          // Disconnect a node from all other nodes connecting to it, or that it connects to.
+          function disconnectNode( nodeElement ) {
+	            //for all nodes we connect to,
+	            if (nodeElement.outputConnections) {
+		              for (var i=0; i<nodeElement.outputConnections.length; i++) {
+			                var connector = nodeElement.outputConnections[i];
+			                // find each dstElement and remove us from the dst.inputConnections,
+			                var connections = connector.destination.inputConnections;
+			                connections.splice( connections.indexOf(nodeElement), 1);
+
+                      if (connector.destination.classList.contains("webmidi")) {
+                          // delete pilot lamp on
+		                      connector.destination.midiAccess.disableControl();
+			                }
+
+			                // and delete the line 
+			                connector.line.parentNode.removeChild( connector.line );
+
+
+		              }
+		              // empty our outputConnections
+		              nodeElement.outputConnections = null;
+	            }
+              
+	            // then call disconnect() on our audioNode to clear all outbound connections
+	            // (this is what clear the audio connection, for all outbound connections at once)
+	            if (nodeElement.audioNode) {
+		              nodeElement.audioNode.disconnectFromNextNode();
+              }
+	            if (nodeElement.midiAccess)	{
+		              nodeElement.midiAccess.unsetMidiDevice();
+              }
+	            //for all nodes connecting to us - (aka in us.inputConnections)
+	            if (nodeElement.inputConnections) {
+		              for (var i=0; i<nodeElement.inputConnections.length; i++) {
+			                var connector = nodeElement.inputConnections[i];
+
+			                // this is trickier, because we'll have to destroy all their outbound connections
+                      // TODO: this will suck for source nodes
+			                var src = connector.source;
+			                var connections = src.outputConnections;
+
+			                // delete us from their .outputConnections,
+			                connections.splice( connections.indexOf(nodeElement), 1);
+                      
+			                if (src.classList.contains("webaudio")) {
+		                      src.audioNode.disconnectFromNextNode();
+                      }
+
+			                if (src.classList.contains("webmidi")) {
+                          //console.log(src.midiAccess);
+		                      src.midiAccess.unsetMidiDevice();
+			                }
+
+			                // and delete the line 
+			                connector.line.parentNode.removeChild( connector.line );
+		              }
+		              // empty inputConnections
+		              nodeElement.inputconnections = null;
+	            }
+          }
+      },
+
+
+      // moving node
+      getCursorPosition: function(event) {
+          return {
+              "x": event.clientX + window.scrollX,
+              "y": event.clientY + window.scrollY
+          };
+      },
+      onConnectorPosMove: function(event) {
+          //console.log("[onConnectorPosMove] ", event.target);
+          e = el = event.target;
+          //console.log(el.inputConnections);
+
+          // Get cursor position with respect to the page.
+          var sPos=this.getCursorPosition(event);
+          var x=sPos.x, y=sPos.y;
+
+          // Move drag element by the same amount the cursor has moved. 
+          e.style.left = (this.dragObj.elStartLeft + x - this.dragObj.cursorStartX) + "px";
+          e.style.top  = (this.dragObj.elStartTop  + y - this.dragObj.cursorStartY) + "px";
+
+          if (e.inputConnections) {
+              var c;
+              
+              var off = e.inputs;
+              x = window.scrollX + 22; // node line
+              y = window.scrollY + 22; // node line
+              
+              while (off) {
+                  x+=off.offsetLeft;
+                  y+=off.offsetTop;
+                  off=off.offsetParent;
+              }
+              
+              for (c=0; c<e.inputConnections.length; c++) {
+                  var d0=e.inputConnections[c].line.getAttribute("d");
+                  var pos=this.getCoordinatesFromD(d0);
+                  pos.from.x=x, pos.from.y=y;
+                  var d1=this.getBezierCoordinates(pos.from, pos.to);
+                  if(d1!=false && typeof d1!="undefined") {
+                      e.inputConnections[c].line.setAttribute("d", d1);
+                  }
+                  /*
+                  e.inputConnections[c].line.setAttributeNS(null, "x1", x);
+                  e.inputConnections[c].line.setAttributeNS(null, "y1", y);
+                  */
+              }
+          }
+          if (e.outputConnections) {
+              var c;
+              
+              var off = e.outputs;
+              x = window.scrollX + 22; // node line
+              y = window.scrollY + 22; // node line
+              
+              while (off) {
+                  x+=off.offsetLeft;
+                  y+=off.offsetTop;
+                  off=off.offsetParent;
+              }
+              
+              for (c=0; c<e.outputConnections.length; c++) {
+                  var d0=e.outputConnections[c].line.getAttribute("d");
+                  var pos=this.getCoordinatesFromD(d0);
+                  pos.to.x=x, pos.to.y=y;
+                  var d1=this.getBezierCoordinates(pos.from, pos.to);
+                  if(d1!=false && d1!="undefined") {
+                      e.outputConnections[c].line.setAttribute("d", d1);
+                  }
+                  /*
+                  e.outputConnections[c].line.setAttributeNS(null, "x2", x);
+                  e.outputConnections[c].line.setAttributeNS(null, "y2", y);
+                   */
+              }
+          }
+          event.preventDefault();
+      },
+      startDraggingNode: function(event) {
+          var el;
+          var x, y;
+
+          if (this.ignoreDragging == true) return;
+          if (event.target.tagName.toUpperCase() == "SELECT") return;
+          if (event.target.tagName.toUpperCase() == "INPUT") return;
+          
+          el = event.target;
+          
+          if (el.classList.contains("node")
+              || el.classList.contains("node-button")) {
+              return;
+          }
+          if (el.nodeType == 3) // if it's a text node                                                                                            
+          el = el.parentNode;
+
+
+          el=searchParent(el);
+          function searchParent(e) {
+              if(e.id.match(/_p$/)==null) {
+                  return searchParent(e.parentNode);
+              } else {
+                  return e;
+              }
+          }
+
+          if(el.classList.contains("fullscreenSize")) return;
+          this.dragObj.elNode = el;
+
+          //console.log("[objList] ", this.dragObj);
+
+          // Get cursor position with respect to the page.
+          var sPos=this.getCursorPosition(event);
+          
+          this.dragObj.cursorStartX = sPos.x-20;
+          this.dragObj.cursorStartY = sPos.y;
+          
+          // get left and top position of element
+          this.dragObj.elStartLeft  = parseInt(this.dragObj.elNode.style.left, 10);
+          this.dragObj.elStartTop   = parseInt(this.dragObj.elNode.style.top,  10);
+          
+          if (isNaN(this.dragObj.elStartLeft)) this.dragObj.elStartLeft = 0;
+          if (isNaN(this.dragObj.elStartTop))  this.dragObj.elStartTop  = 0;
+          
+          
+          // Update element's z-index.
+          this.dragObj.elNode.style.zIndex = ++this.dragObj.zIndex;        
+
+          // add eventListener
+          var self=this;
+          document.addEventListener('pointermove', whileDraggingNode, true );
+          document.addEventListener('pointerup',  stopDraggingNode, true );
+          document.addEventListener('pointerleave', stopDraggingNode, true );
+
+          function whileDraggingNode(event) {
+              var x, y;
+              var e=self.dragObj.elNode;
+
+              // Get cursor position with respect to the page.
+              var sPos=self.getCursorPosition(event);
+              var x=sPos.x, y=sPos.y; 
+              
+              // Move drag element by the same amount the cursor has moved. 
+              e.style.left = (self.dragObj.elStartLeft + x - self.dragObj.cursorStartX) + "px";
+              e.style.top  = (self.dragObj.elStartTop  + y - self.dragObj.cursorStartY) + "px";
+              
+              //console.log( "input: ", e.inputConnections, " output:  ", e.outputConnections);
+
+              // update any lines that point in here.
+              if (e.inputConnections) {
+                  var c;
+
+                  var off = e.inputs;
+                  x = window.scrollX + 14; // node line
+                  y = window.scrollY + 18; // node line
+                  
+                  while (off) {
+                      x+=off.offsetLeft;
+                      y+=off.offsetTop;
+                      off=off.offsetParent;
+                  }
+                  
+                  for (c=0; c<e.inputConnections.length; c++) {
+                      var d0=e.inputConnections[c].line.getAttribute("d");
+                      var pos=self.getCoordinatesFromD(d0);
+                      pos.from.x=x, pos.from.y=y;
+                      var d1=self.getBezierCoordinates(pos.from, pos.to);
+                      if(d1!=false && typeof d1!="undefined") {
+                          e.inputConnections[c].line.setAttribute("d", d1);
+                      }
+                      /*
+                      e.inputConnections[c].line.setAttributeNS(null, "x1", x);
+                      e.inputConnections[c].line.setAttributeNS(null, "y1", y);
+                       */
+                  }
+              }
+
+              // update any lines that point out of here.
+              if (e.outputConnections) {
+                  var c;
+                  
+                  //console.log("e.inputs ", e.inputs, e.outputs);
+                  var off = e.outputs;
+                  x = window.scrollX + 14; // node line
+                  y = window.scrollY + 18; // node line
+                  
+                  while (off) {
+                      x+=off.offsetLeft;
+                      y+=off.offsetTop;
+                      off=off.offsetParent;
+                  }
+
+                  for (c=0; c<e.outputConnections.length; c++) {
+                      var d0=e.outputConnections[c].line.getAttribute("d");
+                      var pos=self.getCoordinatesFromD(d0);
+                      pos.to.x=x, pos.to.y=y;
+                      var d1=self.getBezierCoordinates(pos.from, pos.to);
+                      if(d1!=false && typeof d1!="undefined") {
+                          e.outputConnections[c].line.setAttribute("d", d1);
+                      }
+/*
+                      e.outputConnections[c].line.setAttributeNS(null, "x2", x);
+                      e.outputConnections[c].line.setAttributeNS(null, "y2", y);
+*/
+                  }
+              }
+
+              event.preventDefault();
+          }
+          function stopDraggingNode(event) {
+              document.removeEventListener('pointermove', whileDraggingNode, true );
+              document.removeEventListener('pointerup',  stopDraggingNode, true );
+              document.removeEventListener('pointerleave', stopDraggingNode, true );
+
+              event.preventDefault();
+          }
+
+          event.preventDefault();
+      },
+
+
+      startDraggingConnector: function(event) {
+ 	        var el;
+  	      var x, y;
+
+          this.dragObj.elNode = event.target;
+
+          // If this is a text node, use its parent element.
+          if (this.dragObj.elNode.nodeType == 3)
+          this.dragObj.elNode = this.dragObj.elNode.parentNode;
+          
+          // if this is the green or red button, use its parent.
+          if (this.dragObj.elNode.classList.contains("node-button"))
+          this.dragObj.elNode = this.dragObj.elNode.parentNode;
+
+	        // Get the position of the originating connector with respect to the page.
+	        var off = event.target;
+		      var x = window.scrollX+14;
+		      var y = window.scrollY+18;
+	        while (off) {
+		          x+=off.offsetLeft;
+		          y+=off.offsetTop;
+		          off=off.offsetParent;
+	        }
+
+  	      // Save starting positions of cursor and element.
+  	      this.dragObj.cursorStartX = x;
+  	      this.dragObj.cursorStartY = y;
+
+	        // remember if this is an input or output node, so we can match
+	        this.dragObj.originIsInput = this.dragObj.elNode.classList.contains("node-input");
+
+          // define line coler depends on its connection
+          // color sample page: http://www.color-sample.com/
+          if(this.dragObj.elNode.classList.contains("webaudio")) {
+              var lineColor="#699438";
+          } else
+          if(this.dragObj.elNode.classList.contains("webmidi")) {
+              var lineColor="#48D1CC";
+          }
+
+
+	        this.dragObj.elNode.unlitClassname = this.dragObj.elNode.className;
+	        this.dragObj.elNode.className += " canConnect";
+
+	        // Create a connector visual line
+	        var svgns = "http://www.w3.org/2000/svg";
+          
+	        var shape = document.createElementNS(svgns, "path");
+	        shape.setAttributeNS(null, "stroke-width", "7");
+          //shape.setAttributeNS(null, "stroke", lineColor);
+          shape.setAttributeNS(null, "stroke", "url(#wal_b_0)");
+          shape.setAttributeNS(null, "fill", "none");
+          var d=this.getBezierCoordinates({"x":x, "y":y}, {"x":x, "y":y});
+          if(d!=false) {
+              shape.setAttributeNS(null, "d", d);
+          }
+          
+/*
+	        var shape = document.createElementNS(svgns, "line");
+	        shape.setAttributeNS(null, "x1", x);
+	        shape.setAttributeNS(null, "y1", y);
+          shape.setAttributeNS(null, "x2", x);
+          shape.setAttributeNS(null, "y2", y);
+
+          shape.setAttributeNS(null, "stroke", lineColor);
+	        shape.setAttributeNS(null, "stroke-width", "7");
+*/
+	        this.dragObj.connectorShape=shape;
+          
+          document.getElementById("svgCanvas").appendChild(shape);
+          
+
+          // add eventListener
+          var self=this;
+          document.addEventListener('pointermove', whileDraggingConnector, true );
+          document.addEventListener('pointerup',  stopDraggingConnector, true );
+          document.addEventListener('pointerleave', stopDraggingConnector, true );
+
+          event.preventDefault();
+	        event.stopPropagation();
+
+          function whileDraggingConnector(event) {
+	            var x, y;
+	            var toElem = event.toElement;
+
+              // Get cursor position with respect to the page.
+              var sPos=self.getCursorPosition(event);
+              x=sPos.x, y=sPos.y;
+
+	            // Move connector visual line
+              var pos=self.getCoordinatesFromD(self.dragObj.connectorShape.getAttribute("d"));
+              var d=self.getBezierCoordinates({"x": pos.from.x, "y": pos.from.y}, {"x":x, "y":y});
+              if(d!=false && typeof d!="undefined") {
+                  self.dragObj.connectorShape.setAttribute("d", d);
+              }
+              /*
+              self.dragObj.connectorShape.setAttributeNS(null, "x2", x);
+              self.dragObj.connectorShape.setAttributeNS(null, "y2", y);
+               */
+	            // if we're over our originating node, do nothing.
+	            if (toElem == self.dragObj.elemNode) return;
+
+		          // If we used to be lighting up a node, but we're not over it anymore,
+		          // unlight it.
+		          if (self.dragObj.lastLit && (self.dragObj.lastLit != toElem ) ) {
+			            self.dragObj.lastLit.className = self.dragObj.lastLit.unlitClassname;
+			            self.dragObj.lastLit = null;
+		          }
+
+		          // light up connector point underneath, if any
+		          if (toElem.classList.contains("node")) {
+			            if (!self.dragObj.lastLit || (self.dragObj.lastLit != toElem )) {
+				              if (self.dragObj.originIsInput) {
+					                if (toElem.classList.contains("node-output")) {
+						                  toElem.unlitClassname = toElem.className;
+						                  toElem.className += " canConnect";
+						                  self.dragObj.lastLit = toElem;
+					                }
+				              } else {	// first node was an output, so we're looking for an input
+					                if (toElem.classList.contains("node-input")) {
+						                  toElem.unlitClassname = toElem.className;
+						                  toElem.className += " canConnect";
+						                  self.dragObj.lastLit = toElem;
+					                }
+				              }
+			            }
+              }
+              event.preventDefault();
+              event.stopPropagation();
+              
+          }
+          function stopDraggingConnector(event) {
+              document.removeEventListener('pointermove', whileDraggingConnector, true );
+              document.removeEventListener('pointerup',  stopDraggingConnector, true );
+              document.removeEventListener('pointerleave', stopDraggingConnector, true );
+              event.preventDefault();
+
+	            if (self.dragObj.lastLit) {
+		              self.dragObj.lastLit.className = self.dragObj.lastLit.unlitClassname;
+		              self.dragObj.lastLit = null;
+	            }
+
+	            self.dragObj.elNode.className = self.dragObj.elNode.unlitClassname;
+
+	            var toElem = event.toElement || event.target;
+
+              // connect only same type(webaudio to webaudio, webmidi to webmidi)
+              var cc=true;
+              //console.log("[classList] ", toElem.classList, self.dragObj.elNode.classList);
+              if(toElem.classList.contains("webmidi") && self.dragObj.elNode.classList.contains("webaudio")
+                 || toElem.classList.contains("webaudio") && self.dragObj.elNode.classList.contains("webmidi") ) {
+                  cc=false;
+              }
+
+              if (cc==true && toElem.classList) {
+
+                  // if we don't have class, we're not a node.
+	                // if this is the green or red button, use its parent.
+	                if (toElem.classList.contains("node-button")) toElem = toElem.parentNode;
+
+		              // Get the position of the originating connector with respect to the page.
+		              var off = toElem;
+		              var x = window.scrollX + 8;//self.connectorDiameter/2; // node line
+		              var y = window.scrollY + 22;//self.connectorDiameter/2; // node line
+                  
+		              while (off) {
+			                x+=off.offsetLeft;
+			                y+=off.offsetTop;
+			                off=off.offsetParent;
+		              }
+		              self.dragObj.connectorShape.setAttributeNS(null, "x2", x);
+	                self.dragObj.connectorShape.setAttributeNS(null, "y2", y);
+                  
+		              var str=""+toElem.className;
+
+		              // If we're over a connection point, make the connection
+		              if (self.dragObj.originIsInput) {
+			                if (toElem.classList.contains("node-output")) {
+				                  // can connect!
+				                  self.connectNodes.bind(self)(toElem, self.dragObj.elNode);
+				                  return;
+			                }
+		              } else {
+                      // first node was an output, so we're looking for an input
+			                if (toElem.classList.contains("node-input")) {
+				                  // can connect!
+				                  // TODO: first: swap the line endpoints so they're consistently x1->x2
+				                  // That makes updating them when we drag nodes around easier.
+				                  self.connectNodes.bind(self)(self.dragObj.elNode, toElem);
+				                  return;
+			                }
+		              }
+	            }
+	            // Otherwise, delete the line
+	            self.dragObj.connectorShape.parentNode.removeChild(self.dragObj.connectorShape);
+	            self.dragObj.connectorShape = null;
+          }
+      },
+      connectNodes: function ( src, dst ) {
+	        var connectorShape = this.dragObj.connectorShape;
+          src.className +=" connected";
+          dst.className +=" connected";
+          
+          var src_outputs=src.childNodes;
+          var dst_inputs=dst.childNodes;
+          src=searchParent(src);
+          src.outputs=src_outputs[0];
+          dst=searchParent(dst);
+          dst.inputs=dst_inputs[0];
+          function searchParent(e) {
+              if(e.id.match(/_p$/)==null) {
+                      return searchParent(e.parentNode);
+              } else {
+                  return e;
+              }
+          }
+          
+           // connect only between same type of node
+          if(src.classList.contains("webaudio")) {
+              if(!dst.classList.contains("webaudio")){
+                  return;
+              }
+          }
+          if(src.classList.contains("webmidi")) {
+              if(!dst.classList.contains("webmidi")){
+                  return;
+              }
+          }
+          
+          // Put an entry into the source's outputs
+          if (!src.outputConnections)
+          src.outputConnections = new Array();
+          var connector = new Object();
+          connector.line = connectorShape;
+          connector.source = src;
+          connector.destination = dst;
+          src.outputConnections.push(connector);
+	        //Make sure the connector line points go from src->dest (x1->x2)
+	        if (!this.dragObj.originIsInput) {
+              //console.log("[dst] ", dst.classList);
+              var offsetfine=0; // node line
+              if(dst.classList.contains("destination")) offsetfine=5; // desitination node line
+              // need to flip
+
+		          var shape = connectorShape;
+              var pos=this.getCoordinatesFromD(shape.getAttributeNS(null, "d"));
+              shape.setAttributeNS(null, "d", this.getBezierCoordinates({"x":pos.to.x, "y":pos.to.y}, {"x":pos.from.x, "y":pos.from.y}));
+
+/*
+		          var shape = connectorShape;
+		          var x = shape.getAttributeNS(null, "x2");
+		          var y = parseInt(shape.getAttributeNS(null, "y2")) + offsetfine;
+	            shape.setAttributeNS(null, "x2", shape.getAttributeNS(null, "x1"));
+	            shape.setAttributeNS(null, "y2", shape.getAttributeNS(null, "y1"));
+		          shape.setAttributeNS(null, "x1", x);
+		          shape.setAttributeNS(null, "y1", y);
+*/
+	        }
+          
+          // Put an entry into the destinations's inputs
+          if (!dst.inputConnections) {
+              dst.inputConnections = new Array();
+          }
+          connector = new Object();
+          connector.line = connectorShape;
+          connector.source = src;
+          connector.destination = dst;
+          dst.inputConnections.push(connector);
+          
+          if (dst.onConnectInput) {
+              dst.onConnectInput();
+          }
+          connectorShape.inputConnection = connector;
+          connectorShape.destination = dst;
+          connectorShape.onclick = this.deleteConnection.bind(this);
+          
+          var srcIdx=(src.id).replace("_p", "").split("_").pop();
+          if((dst.id).match(/destination/)!=0) {
+              var  dstIdx="destination";
+              //console.log("[connect to destination] ", src.id,  dst.id );
+          } else {
+              var dstIdx=(dst.id).replace("_p", "").split("_").pop();
+          }
+          for(var i=0; i<this.components.length; i++){
+              if(srcIdx==this.components[i].Idx){
+                  this.components[i].connections.output.push(srcIdx);
+              }
+              if(dstIdx==this.components[i].Idx){
+                  this.components[i].connections.input.push(dstIdx);
+              }
+          }
+          
+          connectorShape = null;
+          
+          this.connectAudioMIDINode.bind(this)( src, dst );
+      },
+      deleteConnection: function (event) {
+          var connections = event.target.destination.inputConnections;
+          this.breakSingleInputConnection.bind(this)( connections, connections.indexOf(event.target.inputConnection) );
+      },
+      breakSingleInputConnection: function ( connections, index ) {
+          var connector = connections[index];
+		      var src = connector.source;
+		      var dst = connector.destination;
+
+          // delete connection info of outputConnection in source
+          for(var i=0; i<src.outputConnections.length; i++) {
+              if(src.outputConnections[i].source==connector.source
+                 && src.outputConnections[i].destination==connector.destination
+                 && src.outputConnections[i].line==connector.line) {
+                  src.outputConnections.splice( i, 1 );
+              }
+          }
+
+          // delete connection info of inputConnection in destination
+          for(var i=0; i<dst.inputConnections.length; i++) {
+              if(dst.inputConnections[i].source==connector.source
+                 && dst.inputConnections[i].destination==connector.destination
+                 && dst.inputConnections[i].line==connector.line) {
+                  dst.inputConnections.splice( i, 1 );
+              }
+          }
+
+          // disconnect and reconnect if connection left more than one
+          if (src.classList.contains("webaudio")) {
+		          var reStart=src.audioNode.disconnectFromNextNode();
+              var count=src.outputConnections.length, i=0;
+              if(count>0) {
+                  while(count>i) {
+                      var sn=(src.outputConnections[i].source.id).replace("_p", "");
+                      var dn=(src.outputConnections[i].destination.id).replace("_p", "");
+                      var src=document.getElementById( sn );
+                      var dst=document.getElementById( dn );
+                      
+                      if(typeof dst.getInputNode!="undefined") {
+                          src.connectToNextNode(dst.getInputNode());
+                      }
+                      i++;
+                  }
+                  if(reStart==true) {
+                      src.startPlay();
+                  }
+              }
+          }
+			    if (src.classList.contains("webmidi")) {
+		          src.midiAccess.unsetMidiDevice();
+		          src.midiAccess.disableControl();
+			    }
+          
+			    if (dst.classList.contains("webmidi")) {
+		          dst.midiAccess.disableControl();
+			    }
+          
+          // and delete the line 
+		      connector.line.parentNode.removeChild( connector.line );
+          
+		      // finally, remove us from the line
+		      connections.splice( index, 1 );
+          
+      },
+      connectAudioMIDINode: function ( src, dst ) {
+          var sObj=new Object(), dObj=new Object();
+          if(src.classList.contains("webaudio")) {
+              sObj=src.audioNode;
+              if(dst.id=="destination_p") {
+                  var dObj=new Object();
+                  var self=this;
+                  dObj.getInputNode=function(){
+                      return self.webAudioDestination;
+                  }
+              } else {
+                var dObj=dst.audioNode;
+              }
+              // connect to next node
+              sObj.connectToNextNode(dObj.getInputNode());
+          } else if(src.classList.contains("webmidi")) {
+              sObj=src.midiAccess;
+              dObj=dst.midiAccess;
+
+              // connect to next node
+              dObj.enableControl();
+              dObj.setMidiDevice=sObj.setMidiDevice.bind(sObj);
+              dObj.unsetMidiDevice=sObj.unsetMidiDevice.bind(sObj);
+          }
+      },
+      getCoordinatesFromD: function(d) {
+          var pos0=d.replace("M ", "").split(" ").shift().split(",");
+          var pos1=d.replace("M ", "").split(" ").pop().split(",");
+          return {"from":{"x":pos0[0], "y":pos0[1]}, "to":{"x":pos1[0], "y":pos1[1]}};
+      },
+      getBezierCoordinates: function(from, to) {
+          var out;
+          if(from.x=="" || from.y=="" || to.x=="" || to.y=="") {
+              return;
+          }
+          from={"x":parseInt(from.x), "y":parseInt(from.y)};
+          to={"x":parseInt(to.x), "y":parseInt(to.y)};
+          if(from.x<=to.x && from.y<=to.y) {
+              //console.log("type A");
+              // d="M 0,0 C 100,10 200,290 300,300"
+              var bf={"x": from.x + 0.80 * Math.abs(to.x-from.x), "y": from.y + 0.05 * Math.abs(to.y-from.y)};
+              var bt={"x": to.x - 0.07 * Math.abs(to.x-from.x), "y": to.y + 0.05 * Math.abs(to.y-from.y)};
+          } else if(from.x<=to.x && from.y>=to.y) {
+              //console.log("type B");
+              // d="M 300,300 C 400,290 500,10 600,0"
+              var bf={"x": from.x + 0.07 * Math.abs(to.x-from.x), "y": from.y + 0.05 * Math.abs(to.y-from.y)};
+              var bt={"x": to.x - 0.80 * Math.abs(to.x-from.x), "y": to.y + 0.05 * Math.abs(to.y-from.y)};
+          }
+          else if(from.x>to.x && from.y<to.y) {
+              //console.log("type C");
+              // d="M 300,300 C 310,400 10,500 0,600"
+              var bf={"x": from.x - 0.80 * Math.abs(to.x-from.x), "y": from.y + 0.05 * Math.abs(to.y-from.y)};
+              var bt={"x": to.x + 0.07 * Math.abs(to.x-from.x), "y": to.y + 0.05 * Math.abs(to.y-from.y)};
+          }
+          else if(from.x>to.x && from.y>to.y) {
+              //console.log("type D");
+              // d="M 300,300 C 310,400 610,500 600,600"
+              var bf={"x": from.x - 0.07 * Math.abs(to.x-from.x), "y": from.y + 0.05 * Math.abs(to.y-from.y)};
+              var bt={"x": to.x + 0.80 * Math.abs(to.x-from.x), "y": to.y + 0.05 * Math.abs(to.y-from.y)};
+          }
+          else {
+              return false;
+          }
+          out="M " + from.x+","+from.y + " C " + 
+              bf.x + "," + bf.y + " " +
+              bt.x + "," + bt.y + " " +
+              to.x+","+to.y;
+          return out;
+      }
+      
+  });
+  </script>
+</polymer-element>

@@ -1,0 +1,343 @@
+<!--
+Copyright (c) 2014 Yamaha Corporation. All rights reserved.
+Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+-->
+<!-- TODO: MUST care when no physical devices are connected -->
+<link rel="import" href="../wm-platform/wm-resourcemanager.html">
+<polymer-element name="wm-miditodevice" extends="wm-resourcemanager" attributes="">
+  <template>
+    <link rel="stylesheet" href="../../css/reset.css">
+    <link rel="stylesheet" href="../../css/elements.css">
+    <style type="text/css">
+    .outerline {
+      width:auto; 
+      height:auto; 
+      float:left; 
+      margin:0px; 
+      padding:10px; 
+      background-color:#ffffff; 
+      border-radius:0px; 
+      border:0px solid #dddddd; 
+      z-index:1;
+    }
+    .msg-indicator {
+      position:absolute;
+      top:0px;
+      left:8px;
+      margin:5px 3px 0px 0px;
+      padding:0px;
+      background-color:rgba(221, 221, 221, 1);
+      float:left;
+      width:18px;
+      height:18px;
+      border-radius:50%;
+      transition:0.1s;
+      font-size:10px;
+    }
+    .msg-indicator.ch {
+      position:relative;
+    }
+    .on {
+      -webkit-animation: indicator 1s linear 0 infinite alternate;
+    }
+    @-webkit-keyframes indicator {
+        0% { background-color: rgba(225, 225, 255, 1); }
+      100% { background-color: rgba(94, 94 ,236, 1); }
+    }
+    .onCh {
+      background-color:rgba(247, 177, 93, 1);
+    }
+    .ch-monitor {
+      position:relative;
+      height:25px;
+      margin:0px 0px 0px 0px;
+    }
+    .webmidilink {
+      position:absolute;
+      top:3px;
+      left:210px;
+      clear: both;
+      cursor:pointer;
+    }
+    .webmiidlink-iframe {
+      border-radius:5px;
+      transition:0.5s;
+    }
+    .webmidilink-title {
+      display:block;
+      background-color:#ffffff;
+      border:1px dashed #dddddd;
+      padding:5px 10px 5px 10px;
+      font-size:10px;
+      font-weight:bold;
+      border-radius:5px;
+      transition:0.3s;
+    }
+    .webmidilink-title:hover {
+      background-color:#444444;
+      color:#ffffff;
+    }
+    .top-title {
+      position:absolute;
+      top:0px;
+      left:0px;
+      width:100%;
+      border:0px solid #bbbbbb; 
+      background-color:rgba(83, 95, 107, 1) /*#6e6e6e*/; 
+      color:#eeeeee;
+      margin:0px; 
+      padding:5px 0px; 
+      border-radius:0px;
+    }
+    .select-device {
+      margin:20px 0px 10px 0px; 
+      margin-top:10px; 
+      font-size:13px; 
+      width:auto; 
+      border:1px solid #999999;
+      padding:5px;
+      border-radius:0px;    
+    }
+    paper-button[raisedButton].colored {
+      background: #4285f4;
+      color: #fff;
+    }
+    </style>
+    <div id="miditodevice" class="outerline">
+      <span class="top-title"><span style="margin-left:32px;">MIDI To Devices</span></span><br>
+      <div id="msg-indicator" class="msg-indicator"></div>
+      <div>
+        <span><select id="midioutput" class="select-device" disabled="disabled"></select></span>
+      </div>
+      <div style="float:right;">
+        <paper-button raisedButton id="panic" disabled="disabled">PANIC</paper-button>
+      </div>
+      <div id="ch-monitor" class="ch-monitor" style="clear:both;">
+        <div id="msg-indicator-0" class="msg-indicator ch"></div>
+        <div id="msg-indicator-1" class="msg-indicator ch"></div>
+        <div id="msg-indicator-2" class="msg-indicator ch"></div>
+        <div id="msg-indicator-3" class="msg-indicator ch"></div>
+        <div id="msg-indicator-4" class="msg-indicator ch"></div>
+        <div id="msg-indicator-5" class="msg-indicator ch"></div>
+        <div id="msg-indicator-6" class="msg-indicator ch"></div>
+        <div id="msg-indicator-7" class="msg-indicator ch"></div>
+        <div id="msg-indicator-8" class="msg-indicator ch"></div>
+        <div id="msg-indicator-9" class="msg-indicator ch"></div>
+        <div id="msg-indicator-10" class="msg-indicator ch"></div>
+        <div id="msg-indicator-11" class="msg-indicator ch"></div>
+        <div id="msg-indicator-12" class="msg-indicator ch"></div>
+        <div id="msg-indicator-13" class="msg-indicator ch"></div>
+        <div id="msg-indicator-14" class="msg-indicator ch"></div>
+        <div id="msg-indicator-15" class="msg-indicator ch"></div>
+      </div>
+      <div id="webmidilink" class="webmidilink"></div>
+  </template>
+  <script type="text/javascript" src="./js/webmidilinkSender.js"></script>
+  <script type="text/javascript">
+  Polymer('wm-miditodevice', {
+      getComponentSize: function() {
+          return this.super();
+      },
+      enableControl: function() {
+          this.$["midioutput"].removeAttribute("disabled");
+          this.$["panic"].removeAttribute("disabled");
+          this.$["msg-indicator"].className="msg-indicator on";
+      },
+      disableControl: function() {
+          this.$["midioutput"].value=0; 
+          this.fireEventByIdType("midioutput", "change");
+          this.$["midioutput"].setAttribute("disabled", "disabled");
+          this.$["panic"].setAttribute("disabled", "disabled");
+          this.$["msg-indicator"].className="msg-indicator";
+      },
+      get: function(name) {
+          return this[name];
+      },
+      setMIDIAccess: function(access) {
+          this.super([access]);
+          this.addDeviceToList.bind(this)();
+      },
+      getInputPort: function() {
+          return this.midi.inputs;
+      },
+      getOutputPort: function(name) {
+          return this.midi.outputs;
+      },
+      setMidiDevice: function(device) {
+          console.log("[this is Original]", device);
+      },
+      unsetMidiDevice: function(){
+      },
+      sendAllSoundOff: function(midioutput) {
+          this.super([midioutput]);
+      },
+      publish: {
+      },
+      hello: function() {
+          this.super();
+      },
+      ready: function() {
+          this.hello();
+
+          var self=this;
+          this.$["panic"].addEventListener("mousedown", function(event){
+              self.sendAllSoundOff(self.midioutput);
+          });
+      },
+      webMidiLinkSynth: [{
+          "id":"wml00", "version": 1, "manufacturer":"g200kg",
+          "name":"[Experimental] GMPlayer (Web MIDI Link)",
+          "url":"http://www.g200kg.com/webmidilink/gmplayer/",
+          "size":"width=600,height=600,scrollbars=yes,resizable=yes"
+      },
+      {
+          "id":"wml01", "version": 1, "manufacturer":"Logue",
+          "name":"[Experimental] SoundFont: Yamaha XG (Web MIDI Link)",
+          "url":"http://logue.github.io/smfplayer.js/wml.html",
+          "size":"width=600,height=600,scrollbars=yes,resizable=yes"
+      },], 
+      midi: null, // midi access
+      midioutput: null,
+      stime:null, // for Web MIDI Link
+      lateny:null, // for Web MIDI Link
+      addDeviceToList: function() {
+         // for output
+          this.$["midioutput"].options[0]=new Option("(Select One)", 0);
+          if(this.midi.outputs!=null) {
+              for(var i=0; i<this.midi.outputs.length; i++) {
+                  this.$["midioutput"].options[i+1]=new Option(this.midi.outputs[i].name, i+1);
+              }
+          }
+          for(var i=0; i<this.webMidiLinkSynth.length; i++) {
+              this.$["midioutput"].options[this.$["midioutput"].options.length]=new Option(this.webMidiLinkSynth[i].name, this.$["midioutput"].options.length);
+          }
+
+          this.$["webmidilink"].addEventListener("mousedown", showWmlWindow.bind(this), false);
+          /*
+          this.$["webmidilink"].addEventListener("mouseout", function(event){
+              console.log(event.target.nextSibling);
+              if(typeof event.target.nextSibling!=null 
+                 && event.target.nextSibling.classList.contains("show")) {
+                  showWmlWindow.bind(this)(event);
+              }
+          }, false);
+           */
+          function showWmlWindow(event) {
+              var et=event.target;
+              var en=event.target.nextSibling;
+              
+              if(en.classList.contains("show")) {
+                  en.className=en.className.replace(" show", "");
+                  en.style.setProperty("width", 0+"px");
+                  en.style.setProperty("height", 0+"px");
+                  en.style.removeProperty("border");
+                  en.style.removeProperty("border-top-left-radius");
+                  en.style.removeProperty("border-top-right-radius");
+                  et.style.removeProperty("border-bottom-left-radius");
+                  et.style.removeProperty("border-bottom-right-radius");
+                  et.style.setProperty("border", "1px dashed #dddddd");
+              } else {
+                  en.className+=" show";
+                  en.style.setProperty("width", "400px");
+                  en.style.setProperty("height", "200px");
+                  en.style.setProperty("background-color", "#ffffff");
+                  en.style.setProperty("border", "1px solid #dddddd");
+                  en.style.setProperty("border-top-left-radius", "0px");
+                  en.style.setProperty("border-top-right-radius", "0px");
+                  et.style.setProperty("border-bottom-left-radius", "0px");
+                  et.style.setProperty("border-bottom-right-radius", "0px");
+                  et.style.setProperty("border", "1px solid #dddddd");
+              }
+          }
+          
+          var self=this;
+          this.$["midioutput"].addEventListener("change", function(event){
+
+              self.midioutput=null;
+              while(self.$["webmidilink"].childNodes.length>0) {
+                  self.$["webmidilink"].removeChild(self.$["webmidilink"].childNodes.item(0));
+              }
+              
+              var idx=event.target.value-1;
+              if(idx<0) return;
+              if(self.midi.outputs!=null && idx>=self.midi.outputs.length) {
+                  var sdata=self.webMidiLinkSynth[idx-self.midi.outputs.length];
+                  //synth.Load(sdata.url, sdata.id, sdata.size, self.$["webmidilink"]);
+                  var elem=self.$["webmidilink"];
+
+                  var text=document.createElement("span");
+                  text.innerHTML="Web MIDI Link";
+                  text.className="webmidilink-title"
+
+                  var d=document.createElement("div");
+                  d.id="d_"+idx;
+                  d.className="webmiidlink-iframe";
+                  d.style.setProperty("overflow", "hidden");
+                  d.style.setProperty("width", "0px");
+                  d.style.setProperty("height", "0px");
+
+                  var iframe=document.createElement("iframe");
+                  iframe.src=sdata.url;
+                  iframe.style.setProperty("border", "0px solid #ffffff");
+                  iframe.style.setProperty("width", "400px");
+                  iframe.style.setProperty("height", "200px");
+                  iframe.style.setProperty("margin", "0px");
+                  iframe.style.setProperty("border-radius", "5px");
+                  iframe.id="sy"+idx;
+                  iframe.className="iframe-element";
+                  
+                  d.appendChild(iframe);
+                  elem.appendChild(text);
+                  elem.appendChild(d);
+
+                  synth.setSynth(iframe.contentWindow);
+                  
+                  self.midioutput={
+                      "id": null,
+                      "manufacturer": sdata.manufacturer,
+                      "name": sdata.name,
+                      "type": "output",
+                      "version": sdata.version,
+                      "send": null,
+                      "tgType": "webmidilink"
+                  };
+                  self.midioutput.send=function(msg, time) {
+                      // time must be converted from absolite time to relative time.
+                      // Web MIDI API handles absolute time, but Web MIDI Links needs relative time.
+                      var aTime;
+                      aTime=time-(window.performance.now()-this.stime)-this.stime + this.latency;
+                      if(typeof msg=="object") {
+                          var tmm=[];
+                          for(var i=0; i<msg.length; i++) {
+                              tmm.push(msg[i].toString(16).replace("0x", ""));
+                          }
+                      }
+                      var out="midi,"+tmm.join(",");
+                      synth.send(out, aTime);
+                  };
+                  self.midioutput.latency=null;
+                  self.midioutput.stime=null;
+              } 
+              else {
+                  self.midioutput=self.midi.outputs[idx];
+                  self.midioutput.tgType="Physical";
+              }
+              self.midioutput.updateMsgIndicator=self.updateMsgIndicator.bind(self);
+              self.setMidiDevice(self.midioutput);
+              console.log(self.midioutput);
+          });
+      },
+      updateMsgIndicator: function(ch) {
+          var self=this;
+          if(ch<16) this.$["msg-indicator-"+ch].className="msg-indicator ch onCh";
+          setTimeout(function(){
+              //self.$["msg-indicator"].className="msg-indicator";
+              if(ch<16) self.$["msg-indicator-"+ch].className="msg-indicator ch";
+          }, 200);
+      },
+      fireEventByIdType: function (id, type) {
+          this.super([id, type]);
+      }
+  });
+  </script>
+</polymer-element>

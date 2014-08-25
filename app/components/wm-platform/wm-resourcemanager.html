@@ -1,0 +1,106 @@
+<!--
+Copyright (c) 2014 Yamaha Corporation. All rights reserved.
+Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+-->
+<script type="text/javascript">
+var audioContext, midi;
+var onmidimessagelist=[];
+</script>
+<link rel="import" href="../material-design/font-roboto/roboto.html">
+<link rel="import" href="../material-design/core-icons/core-icons.html">
+<link rel="import" href="../material-design/core-icons/iconsets/hardware-icons.html">
+<link rel="import" href="../material-design/paper-tabs/paper-tabs.html">
+<link rel="import" href="../material-design/core-toolbar/core-toolbar.html">
+<link rel="import" href="../material-design/core-header-panel/core-header-panel.html">
+<link rel="import" href="../material-design/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../material-design/paper-dialog/paper-dialog-transition.html">
+<link rel="import" href="../material-design/paper-dialog/paper-dialog.html">
+<link rel="import" href="../material-design/paper-radio-group/paper-radio-group.html">
+<link rel="import" href="../material-design/core-tooltip/core-tooltip.html">
+<link rel="import" href="../material-design/paper-shadow/paper-shadow.html">
+<link rel="import" href="../material-design/paper-ripple/paper-ripple.html">
+<link rel="import" href="../material-design/paper-toggle-button/paper-toggle-button.html">
+<link rel="import" href="../material-design/paper-checkbox/paper-checkbox.html">
+<link rel="import" href="../material-design/paper-slider/paper-slider.html">
+<link rel="import" href="../material-design/paper-input/paper-input.html">
+
+<script type="text/javascript" src="../../components/wm-platform/pointerevents.js"></script>
+<script type="text/javascript" src="../../components/wm-platform/helper.js"></script>
+<polymer-element name="wm-resourcemanager" attributes="bg_image">
+  <template>
+    <link rel="stylesheet" href="../../css/elements.css">
+  </template>
+  <script type="text/javascript">
+  var requestAnimationFrame = window.requestAnimationFrame ||
+                              window.webkitRequestAnimationFrame ||
+                              window.mozRequestAnimationFrame ||
+                              window.msRequestAnimationFrame;
+
+  Polymer('wm-resourcemanager', {
+      hello: function() {
+          console.log("[Hello, I am loaded] ", this.tagName);
+      },
+      ready: function() {
+      },
+      getComponentSize: function() {
+          return {"width":"auto", "height":"auto"};
+      },
+      setAudioContext: function(ac) {
+          if(ac=="") console.error("Set AudioContext!");
+          this.ac=ac;
+      },
+      setIgnoreDragging: function(elems) {
+          var self=this;
+          for(var i=0; i<elems.length; i++) {
+              elems[i].addEventListener("mousedown", function(event){
+                  self.fire("ignoreDragging", {"status":true});
+              });
+              elems[i].addEventListener("mouseup", function(event){
+                  self.fire("ignoreDragging", {"status":false});
+              });
+
+              elems[i].addEventListener("touchstart", function(event){
+                  self.fire("ignoreDragging", {"status":true});
+              });
+              elems[i].addEventListener("touchend", function(event){
+                  self.fire("ignoreDragging", {"status":false});
+              });
+          }
+      },
+      setMIDIAccess: function(access) {
+          this.midi=access;
+      },
+      getMIDIAccess: function() {
+          this.midiinputs=midi.inputs;
+          this.midioutputs=midi.outputs;
+          return midi;
+      },
+      sendAllSoundOff: function (device) {
+          if(device==null) return;
+          for(var i=0; i<16; i++) {
+              var fb=parseInt("0xb"+i.toString(16), 16);
+              device.send([fb, 0x78, 0x00]);
+              this.updateMsgIndicator(i);
+          }
+      },
+      fireEventByIdType: function (id, type) {
+          var e=document.createEvent("MouseEvent");
+          var b=this.$[id]
+          e.initEvent(type, true, true, window, 1, 0, 0, 0, 0, false, false, false, false, 0, null);
+          b.dispatchEvent(e);
+      },
+      setSelfIdName: function(idName) {
+          this.idName=idName;
+          console.log("[idName] ", idName);
+      },
+      getSelfIdName: function() {
+          //console.log(this.idName);
+          return this.idName;
+      },
+      getConfigPanel: function() {
+          var out=this.$["config_panel"]
+          return out;
+      },
+  });
+  </script>
+</polymer-element>

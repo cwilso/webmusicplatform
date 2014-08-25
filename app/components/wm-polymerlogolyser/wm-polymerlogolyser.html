@@ -1,0 +1,587 @@
+<!--
+Copyright (c) 2014 Yamaha Corporation. All rights reserved.
+Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+-->
+<link rel="import" href="../wm-platform/wm-resourcemanager.html">
+<polymer-element name="wm-polymerlogolyser" extends="wm-resourcemanager" attributes="length margin dispmode">
+  <link rel="import" href="../wm-platform/wm-midicontrolpanel.html">
+  <template>
+    <style type="text/css">
+    .outerline {
+      position:relative; // change conector's z-index to outerline, element, connector
+      float:left; 
+      margin:0px; 
+      padding:10px; 
+      background-color:#ffffff; 
+      border-radius:0px; 
+      border:0px solid #dddddd; 
+    }
+    .analyser-area {
+      position:relative; 
+      display: -webkit-flex;
+      display: flex;
+      top:0;
+      left:0;
+      marign:0px; 
+      padding:0px;
+      justify-content: center;
+      -webkit-flex-align: center;
+    }
+    </style>
+
+    <div id="outerline" class="outerline">
+      <div style="height:10px; width:100%;"></div>
+      <div id="analyser-area" class="analyser-area"><canvas id="analyser" width="410px" height="280px" style="border: 0px solid #dddddd; border-radius:5px;"></canvas></div>
+      <div style="height:10px; width:100%;"></div>
+    </div>
+
+
+    <div id="config_panel">
+      <style type="text/css">
+      h2.title {
+        padding: 10px 0px 5px 0px;
+        margin: 0px;
+      }
+      .sizeChange {
+        marign:0px;
+        padding:0px 20px 0px 20px;
+      }
+      .sizeChange-input {
+        width:340px;
+      }
+      </style>
+      <div class="sizeChange">
+        <div style="height:15px;"></div>
+        <h2 class="title">Change Size</h2>
+        <paper-slider id="sizeChange" min="1" max="5" value="1" step="0.2" class="sizeChange-input"></paper-slider>
+      </div>
+      <div style="height:15px;"></div>
+      <!--<wm-midicontrolpanel id="midicontrolpanel_{{this.idName}}" dispinput="true"></wm-midicontrolpanel>-->
+    </div>
+
+  </template>
+  <script type="text/javascript" src="rgbhsvConverter.js"></script>
+  <script type="text/javascript">
+  var rhc=new rhConverter();
+
+  Polymer('wm-polymerlogolyser', {
+      getComponentSize: function() {
+          return this.super();
+      },
+      enableControl: function() {
+          this.$["start"].removeAttribute("disabled");
+          this.$["stop"].removeAttribute("disabled");
+      },
+      disableControl: function() {
+          this.$["start"].setAttribute("disabled", "disabled");
+          this.$["stop"].setAttribute("disabled", "disabled");
+      },
+      setAudioContext: function(ac) {
+          this.super([ac]);
+          this.analyser=this.ac.createAnalyser();
+          this.analyser.smoothingTimeConstant = 0.3;
+      },
+      connectToNextNode: function(nn){
+          this.analyser.connect(nn);
+      },
+      disconnectFromNextNode: function(){
+          this.analyser.disconnect();
+      },
+      getInputNode: function() {
+          return this.analyser;
+      },
+      setDesign: function(idx) {
+          if(idx>=this.designTemplate.length || idx<0) idx=0;
+          this.center=this.designTemplate[idx].data;
+          this.drawPolymer("init");
+      },
+      getDesignName: function() {
+          for(var i=0, out=[]; i<this.designTemplate.length; i++) {
+              out[i]={"name": this.designTemplate[i].name};
+          }
+          return out;
+      },
+      start: function() {
+          this.enabled=true;
+          this.draw();
+      },
+      stop: function() {
+          cancelAnimationFrame(this.timerId);
+          if(this.stream!=null) this.stream.stop();
+          this.enabled=false;
+      },
+      initialDraw: function() {
+          this.drawPolymer("init");
+      },
+      publish: {
+      },
+      hello: function() {
+          this.super();
+      },
+      getMIDIAccess: function() {
+          this.midi=this.super();
+      },
+      initAnalyser: function() {
+          this.canvas=this.$["analyser"];
+          this.cc=this.canvas.getContext("2d");
+
+          this.yt=this.lg*Math.sin(60*Math.PI/180)/3; // y_ticks
+          this.graph={
+              "line":{
+                  "data":[],
+                  "color": {"rgb": [0, 103, 191], "opacity":0.0} // blue
+                  //"color": {"rgb": [255, 212, 0], "opacity":0.0} // light yellow
+                  //"color": {"rgb": [0, 128, 0], "opacity":0.0} // green
+              },
+              "bar":{
+                  "data":[],
+                  "number": 200,
+                  "color": {"rgb": [240, 240, 240],"opacity":0.0}
+                  //"color": {"rgb": [0, 103, 191], "opacity":0.0} // blue
+                  //"color": {"rgb": [255, 255, 224], "opacity":0.0} // light yellow
+                  //"color": {"rgb": [0, 128, 0], "opacity":0.0} // green
+              }
+          };
+          var rgb=this.graph.line.color.rgb;
+          this.graph.line.color.hsv={"s":1, "data":rhc.RGBtoHSV(rgb[0], rgb[1], rgb[2], false)};
+          rgb=this.graph.bar.color.rgb;
+          this.graph.bar.color.hsv={"s":1, "data":rhc.RGBtoHSV(rgb[0], rgb[1], rgb[2], false)};;
+          
+          // begining position
+          this.defPos={
+              "x":1.5*this.lg+this.mg,
+              "y":this.lg*Math.sin(Math.PI*60/180)/3+this.mg
+          };
+          this.bp={"x":this.defPos.x, "y":this.defPos.y};
+          
+          // canvas size 
+          this.canvas.width=5*this.lg+2*this.mg;
+          this.canvas.height=4*this.lg*Math.sin(Math.PI*60/180)+2*this.mg;
+
+          this.designTemplate=[
+              {
+                  "name": "Polymer Logo",
+                  "data": [
+                      {"rgba":null, "color": [116, 137, 253], "x": this.bp.x,             "y": this.bp.y,            "rotate": 0}, 
+                      {"rgba":null, "color": [99, 122, 253],  "x": this.bp.x-0.5*this.lg, "y": this.bp.y+this.yt,    "rotate": 180},
+                      {"rgba":null, "color": [83, 109, 254],  "x": this.bp.x-0.5*this.lg, "y": this.bp.y+3*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [74, 97, 228],   "x": this.bp.x-this.lg,     "y": this.bp.y+4*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [66, 87, 203],   "x": this.bp.x-this.lg,     "y": this.bp.y+6*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [48, 63, 159],   "x": this.bp.x-0.5*this.lg, "y": this.bp.y+7*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [38, 50, 127],   "x": this.bp.x-0.5*this.lg, "y": this.bp.y+9*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [127, 32, 64],   "x": this.bp.x,             "y": this.bp.y+10*this.yt, "rotate": 180},
+                      {"rgba":null, "color": [153, 38, 77],   "x": this.bp.x+0.5*this.lg, "y": this.bp.y+9*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [178, 44, 90],   "x": this.bp.x+0.5*this.lg, "y": this.bp.y+7*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [204, 51, 103],  "x": this.bp.x+this.lg,     "y": this.bp.y+6*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [229, 57, 115],  "x": this.bp.x+this.lg,     "y": this.bp.y+4*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [255, 64, 129],  "x": this.bp.x+1.5*this.lg, "y": this.bp.y+3*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [254, 82, 140],  "x": this.bp.x+1.5*this.lg, "y": this.bp.y+this.yt,    "rotate": 180},
+                      {"rgba":null, "color": [254, 101, 153], "x": this.bp.x+2.0*this.lg, "y": this.bp.y,            "rotate": 0}, 
+                      {"rgba":null, "color": [50, 64, 144],   "x": this.bp.x+2.5*this.lg, "y": this.bp.y+this.yt,    "rotate": 180},
+                      {"rgba":null, "color": [63, 81, 181],   "x": this.bp.x+2.5*this.lg, "y": this.bp.y+3*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [146, 157, 212], "x": this.bp.x+3.0*this.lg, "y": this.bp.y+4*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [133, 145, 207], "x": this.bp.x+3.0*this.lg, "y": this.bp.y+6*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [121, 134, 203], "x": this.bp.x+2.5*this.lg, "y": this.bp.y+7*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [108, 120, 182], "x": this.bp.x+2.5*this.lg, "y": this.bp.y+9*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [96, 107, 162],  "x": this.bp.x+2.0*this.lg, "y": this.bp.y+10*this.yt, "rotate": 180},
+                  ]
+              },
+              {
+                  "name": "Polymer 01",
+                  "data": [
+                      {"rgba":null, "color": [116, 137, 253], "x": this.bp.x,             "y": this.bp.y,            "rotate": 0}, 
+                      {"rgba":null, "color": [99, 122, 253],  "x": this.bp.x-0.5*this.lg, "y": this.bp.y+this.yt,    "rotate": 180},
+                      {"rgba":null, "color": [83, 109, 254],  "x": this.bp.x-0.5*this.lg, "y": this.bp.y+3*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [74, 97, 228],   "x": this.bp.x-this.lg,     "y": this.bp.y+4*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [66, 87, 203],   "x": this.bp.x-this.lg,     "y": this.bp.y+6*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [48, 63, 159],   "x": this.bp.x-0.5*this.lg, "y": this.bp.y+7*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [38, 50, 127],   "x": this.bp.x-0.5*this.lg, "y": this.bp.y+9*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [24, 31, 79],    "x": this.bp.x,             "y": this.bp.y+10*this.yt, "rotate": 180},
+                      {"rgba":null, "color": [24, 31, 79], "x": this.bp.x+2.0*this.lg, "y": this.bp.y,            "rotate": 0}, 
+                      {"rgba":null, "color": [50, 64, 144],   "x": this.bp.x+2.5*this.lg, "y": this.bp.y+this.yt,    "rotate": 180},
+                      {"rgba":null, "color": [63, 81, 181],   "x": this.bp.x+2.5*this.lg, "y": this.bp.y+3*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [146, 157, 212], "x": this.bp.x+3.0*this.lg, "y": this.bp.y+4*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [133, 145, 207], "x": this.bp.x+3.0*this.lg, "y": this.bp.y+6*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [121, 134, 203], "x": this.bp.x+2.5*this.lg, "y": this.bp.y+7*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [108, 120, 182], "x": this.bp.x+2.5*this.lg, "y": this.bp.y+9*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [96, 107, 162],  "x": this.bp.x+2.0*this.lg, "y": this.bp.y+10*this.yt, "rotate": 180},
+                  ]
+              },
+              {
+                  "name": "Polymer 02",
+                  "data": [
+                      {"rgba":null, "color": [116, 137, 253], "x": this.bp.x,             "y": this.bp.y,            "rotate": 0}, 
+                      {"rgba":null, "color": [99, 122, 253],  "x": this.bp.x-0.5*this.lg, "y": this.bp.y+this.yt,    "rotate": 180},
+                      {"rgba":null, "color": [83, 109, 254],  "x": this.bp.x-0.5*this.lg, "y": this.bp.y+3*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [74, 97, 228],   "x": this.bp.x-this.lg,     "y": this.bp.y+4*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [66, 87, 203],   "x": this.bp.x-this.lg,     "y": this.bp.y+6*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [48, 63, 159],   "x": this.bp.x-0.5*this.lg, "y": this.bp.y+7*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [38, 50, 127],   "x": this.bp.x-0.5*this.lg, "y": this.bp.y+9*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [24, 31, 79],    "x": this.bp.x,             "y": this.bp.y+10*this.yt, "rotate": 180},
+
+                      {"rgba":null, "color": [24, 31, 79],    "x": this.bp.x+2.0*this.lg, "y": this.bp.y,            "rotate": 0}, 
+                      {"rgba":null, "color": [50, 64, 144],   "x": this.bp.x+2.5*this.lg, "y": this.bp.y+this.yt,    "rotate": 180},
+                      {"rgba":null, "color": [63, 81, 181],   "x": this.bp.x+2.5*this.lg, "y": this.bp.y+3*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [146, 157, 212], "x": this.bp.x+3.0*this.lg, "y": this.bp.y+4*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [133, 145, 207], "x": this.bp.x+3.0*this.lg, "y": this.bp.y+6*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [121, 134, 203], "x": this.bp.x+2.5*this.lg, "y": this.bp.y+7*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [108, 120, 182], "x": this.bp.x+2.5*this.lg, "y": this.bp.y+9*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [96, 107, 162],  "x": this.bp.x+2.0*this.lg, "y": this.bp.y+10*this.yt, "rotate": 180},
+                      
+                      
+                      {"rgba":null, "color": [204, 51, 103],  "x": this.bp.x,     "y": this.bp.y+6*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [229, 57, 115],  "x": this.bp.x,     "y": this.bp.y+4*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [255, 64, 129],  "x": this.bp.x+0.5*this.lg, "y": this.bp.y+3*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [254, 82, 140],  "x": this.bp.x+0.5*this.lg, "y": this.bp.y+this.yt,    "rotate": 180},
+                      {"rgba":null, "color": [254, 101,153],  "x": this.bp.x+1.0*this.lg, "y": this.bp.y,            "rotate": 0}, 
+                      
+                      
+                      {"rgba":null, "color": [127, 32, 64],   "x": this.bp.x+1.0*this.lg, "y": this.bp.y+10*this.yt, "rotate": 180},
+                      {"rgba":null, "color": [153, 38, 77],   "x": this.bp.x+1.5*this.lg, "y": this.bp.y+9*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [178, 44, 90],   "x": this.bp.x+1.5*this.lg, "y": this.bp.y+7*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [204, 51, 103],  "x": this.bp.x+2.0*this.lg,     "y": this.bp.y+6*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [229, 57, 115],  "x": this.bp.x+2.0*this.lg,     "y": this.bp.y+4*this.yt,  "rotate": 180},
+                      
+                      {"rgba":null, "color": [153, 38, 77],   "x": this.bp.x+0.5*this.lg, "y": this.bp.y+9*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [178, 44, 90],   "x": this.bp.x+0.5*this.lg, "y": this.bp.y+7*this.yt,  "rotate": 180},
+                      {"rgba":null, "color": [254, 82, 140],  "x": this.bp.x+1.5*this.lg, "y": this.bp.y+this.yt,    "rotate": 180},
+                      {"rgba":null, "color": [255, 64, 129],  "x": this.bp.x+1.5*this.lg, "y": this.bp.y+3*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [204, 51, 103],  "x": this.bp.x+this.lg,     "y": this.bp.y+6*this.yt,  "rotate": 0},
+                      {"rgba":null, "color": [229, 57, 115],  "x": this.bp.x+this.lg,     "y": this.bp.y+4*this.yt,  "rotate": 180},
+                  ]
+              },
+              {
+                  "name": "Polymer 03",
+                  "data": [
+                      /*1*/  {"rgba":null, "color": [167, 90, 164],  "x": this.bp.x-0.5*this.lg, "y": this.bp.y+this.yt,    "rotate": 180},
+                      /*2*/  {"rgba":null, "color": [177, 108,174],  "x": this.bp.x,             "y": this.bp.y,            "rotate": 0}, 
+                      /*3*/  {"rgba":null, "color": [167, 90, 164],  "x": this.bp.x+0.5*this.lg, "y": this.bp.y+this.yt,    "rotate": 180},
+                      /*4*/  {"rgba":null, "color": [177, 108,174],  "x": this.bp.x+1.0*this.lg, "y": this.bp.y,            "rotate": 0}, 
+                      /*5*/  {"rgba":null, "color": [167, 90, 164],  "x": this.bp.x+1.5*this.lg, "y": this.bp.y+this.yt,    "rotate": 180},
+                      /*6*/  {"rgba":null, "color": [177, 108,174],  "x": this.bp.x+2.0*this.lg, "y": this.bp.y,            "rotate": 0}, 
+                      /*7*/  {"rgba":null, "color": [167, 90, 164],   "x": this.bp.x+2.5*this.lg, "y": this.bp.y+this.yt,    "rotate": 180},
+                      
+                      /*8*/  {"rgba":null, "color": [142, 65, 139],   "x": this.bp.x-this.lg,     "y": this.bp.y+4*this.yt,  "rotate": 180},
+                      /*9*/  {"rgba":null, "color": [159, 73, 155],  "x": this.bp.x-0.5*this.lg, "y": this.bp.y+3*this.yt,  "rotate": 0},
+                      /*10*/ {"rgba":null, "color": [142, 65, 139],  "x": this.bp.x,     "y": this.bp.y+4*this.yt,  "rotate": 180},
+                      /*11*/ {"rgba":null, "color": [159, 73, 155],  "x": this.bp.x+0.5*this.lg, "y": this.bp.y+3*this.yt,  "rotate": 0},
+                      /*12*/ {"rgba":null, "color": [142, 65, 139],  "x": this.bp.x+this.lg,     "y": this.bp.y+4*this.yt,  "rotate": 180},
+                      /*13*/ {"rgba":null, "color": [159, 73, 155],  "x": this.bp.x+1.5*this.lg, "y": this.bp.y+3*this.yt,  "rotate": 0},
+                      /*14*/ {"rgba":null, "color": [142, 65, 139],  "x": this.bp.x+2.0*this.lg,     "y": this.bp.y+4*this.yt,  "rotate": 180},
+                      /*15*/ {"rgba":null, "color": [159, 73, 155],   "x": this.bp.x+2.5*this.lg, "y": this.bp.y+3*this.yt,  "rotate": 0},
+                      /*16*/ {"rgba":null, "color": [142, 65, 139], "x": this.bp.x+3.0*this.lg, "y": this.bp.y+4*this.yt,  "rotate": 180},
+                      
+                      /*17*/ {"rgba":null, "color": [127, 58, 124],   "x": this.bp.x-this.lg,     "y": this.bp.y+6*this.yt,  "rotate": 0},
+                      /*18*/ {"rgba":null, "color": [111, 51, 108],   "x": this.bp.x-0.5*this.lg, "y": this.bp.y+7*this.yt,  "rotate": 180},
+                      /*19*/ {"rgba":null, "color": [127, 58, 124],  "x": this.bp.x,     "y": this.bp.y+6*this.yt,  "rotate": 0},
+                      /*20*/ {"rgba":null, "color": [111, 51, 108],   "x": this.bp.x+0.5*this.lg, "y": this.bp.y+7*this.yt,  "rotate": 180},
+                      /*21*/ {"rgba":null, "color": [127, 58, 124],  "x": this.bp.x+this.lg,     "y": this.bp.y+6*this.yt,  "rotate": 0},
+                      /*22*/ {"rgba":null, "color": [111, 51, 108],   "x": this.bp.x+1.5*this.lg, "y": this.bp.y+7*this.yt,  "rotate": 180},
+                      /*23*/ {"rgba":null, "color": [127, 58, 124],  "x": this.bp.x+2.0*this.lg,     "y": this.bp.y+6*this.yt,  "rotate": 0},
+                      /*24*/ {"rgba":null, "color": [111, 51, 108], "x": this.bp.x+2.5*this.lg, "y": this.bp.y+7*this.yt,  "rotate": 180},
+                      /*25*/ {"rgba":null, "color": [127, 58, 124], "x": this.bp.x+3.0*this.lg, "y": this.bp.y+6*this.yt,  "rotate": 0},
+                      
+                      /*26*/ {"rgba":null, "color": [95, 43, 93],   "x": this.bp.x-0.5*this.lg, "y": this.bp.y+9*this.yt,  "rotate": 0},
+                      /*27*/ {"rgba":null, "color": [79, 36, 77],    "x": this.bp.x,             "y": this.bp.y+10*this.yt, "rotate": 180},
+                      /*28*/ {"rgba":null, "color": [95, 43, 93],   "x": this.bp.x+0.5*this.lg, "y": this.bp.y+9*this.yt,  "rotate": 0},
+                      /*29*/ {"rgba":null, "color": [79, 36, 77],   "x": this.bp.x+1.0*this.lg, "y": this.bp.y+10*this.yt, "rotate": 180},
+                      /*30*/ {"rgba":null, "color": [95, 43, 93],   "x": this.bp.x+1.5*this.lg, "y": this.bp.y+9*this.yt,  "rotate": 0},
+                      /*31*/ {"rgba":null, "color": [79, 36, 77],  "x": this.bp.x+2.0*this.lg, "y": this.bp.y+10*this.yt, "rotate": 180},
+                      /*32*/ {"rgba":null, "color": [95, 43, 93], "x": this.bp.x+2.5*this.lg, "y": this.bp.y+9*this.yt,  "rotate": 0},
+                  ]
+              }
+          ];
+          this.center=this.designTemplate[0].data;
+
+          // draw
+          this.drawPolymer("init");
+      },
+      setSelfIdName: function(idName) {
+          this.super([idName]);
+          console.log();
+      },
+      getConfigPanel: function() {
+          return this.super([this.idName]);
+      },
+      setIgnoreDragging: function(elems) {
+          this.super([elems]);
+      },
+      // call when changed into fullscreen or changed size
+      setSize: function(event) {
+          this.$["sizeChange"].style.removeProperty("visibility");
+          if(typeof event.detail!="undefined" && event.detail.size=="full") {
+              event.target.value=Math.floor(event.detail.innerWidth/6/this.length);
+              this.$["sizeChange"].style.setProperty("visibility", "hidden");
+          }
+          this.lg=Math.floor(event.target.value*this.length);
+          this.initAnalyser();
+          this.drawPolymer("init");
+          this.fire("updated-connectorPosMove", {"id":this.id});
+      },
+      
+      ready: function() {
+          this.hello();
+          this.initAnalyser();
+
+          this.getMIDIAccess();
+
+          var self=this;
+          var timerId=setInterval(function(){
+              if(self.idName!=null) {
+                  clearInterval(timerId);
+                  var func=function(msg){
+                      self.midiControl(msg);
+                  };
+//                  self.$["midicontrolpanel"].addOnMidiMessageList(self.idName, func); // comment out
+              }
+          }, 200);
+
+          // set onmidimessage to midicontrolpanel
+/*
+// comment out
+          this.$["midicontrolpanel"].onmidimessage=function(msg){
+              console.log(msg.data);
+          };
+*/
+          var self=this;
+          this.$["analyser"].addEventListener("mousedown", function(event){
+              self.desNum++;
+              if(self.desNum>=self.designTemplate.length) self.desNum=0;
+              self.setDesign(self.desNum);
+          });
+
+          // ignore dragging when contolling [input type=range]
+          this.setIgnoreDragging([this.$["sizeChange"]]);
+
+          this.$["sizeChange"].addEventListener("change", this.setSize.bind(self), false);
+
+          var self=this;
+          setTimeout(function(){
+              self.drawPolymer.bind(self)("init");
+          }, 100);
+
+          var self=this;
+          document.addEventListener("masterStart", function(event){
+              if(event.detail.slaves.contains(self.idName+"_p")) {
+                  self.start.bind(self)();
+              }
+          });
+          document.addEventListener("masterStop", function(event){
+              if(event.detail.slaves.contains(self.idName+"_p")) {
+                  self.stop.bind(self)();
+                  self.drawPolymer("init");
+              }
+          });
+      },
+      cc: null,
+      canvas: null,
+      defPos: {"x":null, "y":null},
+      desNum: 0,
+      length:null,
+      defLength: 70,
+      defMargin:20,
+      dispmode: null,
+      bp: {},
+      lg: null,
+      mg: null,
+      yt: null,
+      center: [],
+      enabled: false,
+      timerId: 0,
+      audioContext: null,
+      analyser: null,
+      media: null,
+      variables: {"opacity":[], "rotate":[]},
+      stream: null,
+      midi:{},
+      idName:null,
+      attributeChanged: function(attrName, oldVal, newVal) {
+          this.lg=this.defLength;
+          if(this.length!="") {
+              this.lg=parseInt(this.length);
+          }
+          this.mg=this.defMargin;
+          if(this.margin!="") {
+              this.mg=parseInt(this.margin);
+          }
+          // draw
+          if(!isNaN(this.lg) && !isNaN(this.mg) && this.dispmode!="") {
+              this.initAnalyser();
+              this.drawPolymer("init");
+          }
+      },
+      midiControl: function(message) {
+          console.log("[onmidimessage]", message.data);
+      },
+      draw: function() {
+          this.drawPolymer();
+          this.timerId=requestAnimationFrame(this.draw.bind(this));              
+      },
+      drawPolymer: function(type) {
+          if(type!="init") this.spectrumAnalyse();
+
+          // background
+          this.cc.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          this.cc.fillStyle="#ffffff";
+          this.cc.rect(0, 0, this.canvas.width, this.canvas.height);
+          this.cc.stroke();
+          this.cc.fill();
+
+          // logo
+          var rd={"x":(Math.random() >0.5? 1 :-1)*Math.random(), "y":(Math.random() >0.5? 1 :-1)*Math.random()};
+          //var rd={"x":0, "y":0};
+          for(var i=0; i<this.center.length; i++) {
+              if(this.dispmode=="demo") {
+                  var lgx=this.lg *0.8*Math.random();
+                  var rtx=this.center[i].rotate *0.8*Math.random();
+                  var o=this.center[i].color;
+                  this.center[i].rgba="rgba("+o.join(",")+",1*Math.random())"; 
+              } else if(this.dispmode=="still" || type=="init") {
+                  var lgx=this.lg;
+                  var rtx=this.center[i].rotate;
+                  var o=this.center[i].color;
+                  this.center[i].rgba="rgba("+o.join(",")+",1)"; 
+              }else if(this.dispmode=="analyser") {
+                  var lgx=this.lg * this.variables.opacity[i];
+                  var direction=1;
+                  if(Math.random()>0.5) {
+                      direction=-1;
+                  }
+                  var rtx=this.center[i].rotate-direction * (30-30 * this.variables.opacity[i]);
+                  var o=this.center[i].color;
+                  this.center[i].rgba="rgba("+o.join(",")+","+this.variables.opacity[i]+")"; 
+              }
+              this.drawRectAngle.bind(this)(this.center[i], lgx, rtx, rd);
+          }
+          if(type=="init") return;
+        
+
+          // line graph
+          if(this.graph.line.color.hsv.data[0]>=340) this.graph.line.color.hsv.s=-1;
+          if(this.graph.line.color.hsv.data[0]<=10) this.graph.line.color.hsv.s=1;
+          this.graph.line.color.hsv.data[0]+=Math.round(this.graph.line.color.hsv.s*Math.random());
+          var hsv=this.graph.line.color.hsv.data;
+          var op=this.graph.line.color.opacity;
+          //var rgb=rhc.HSVtoRGB(360*Math.random(), 180, 255);
+          var rgb=rhc.HSVtoRGB(hsv[0], 180, 255);
+          this.cc.strokeStyle="rgba("+rgb.join(",")+","+op+")";
+          this.cc.lineWidth=6.0;
+          this.cc.beginPath();
+          this.cc.moveTo(this.graph.line.data[1].x, this.graph.line.data[1].y);
+          for(var i=2; i<this.graph.line.data.length; i++) {
+              this.cc.lineTo(this.graph.line.data[i].x, this.graph.line.data[i].y);
+          }
+          this.cc.stroke();
+          this.cc.strokeStyle="#ffffff";
+          this.cc.moveTo(0, 0);
+
+          // bar graph
+          this.cc.fillStyle="rgba("+this.graph.bar.color.rgb.join(",")+","+this.graph.bar.color.opacity+")";
+          this.cc.beginPath();
+          this.cc.moveTo(0, 0);
+          for(var i=0; i<this.graph.bar.data.length; i++) {
+              this.cc.rect(this.graph.bar.data[i].x, this.canvas.height, this.canvas.width/this.graph.bar.number, -this.graph.bar.data[i].y);
+          }
+          this.cc.fill();
+          this.cc.strokeStyle="#ffffff";
+                        
+      },
+      drawRectAngle: function(center, lgx, rtx, rd) {
+          var l=lgx
+          var axis=[];
+          this.cc.beginPath();
+          exCenter={"x":center.x, "y":center.y};
+          center.x=center.x+rd.x;
+          center.y=center.y+rd.y;
+
+          var x=center.x, y=center.y;
+          if(center.rtx!=0) {
+              this.cc.translate(x, y);
+              this.cc.rotate(rtx*Math.PI/180);
+              x=0, y=0;
+          }
+          axis.push({"x": x-l/2 ,"y":y-l*Math.sin(60*Math.PI/180)/3});
+          axis.push({"x": (x-l/2)+l ,"y":y-l*Math.sin(60*Math.PI/180)/3});
+          axis.push({"x": x ,"y":(y-l*Math.sin(60*Math.PI/180)/3)+l*Math.sin(60*Math.PI/180) });
+          this.cc.moveTo(axis[0].x, axis[0].y);
+          this.cc.lineTo(axis[1].x, axis[1].y);
+          this.cc.lineTo(axis[2].x, axis[2].y);
+          this.cc.closePath();
+          this.cc.fillStyle=center.rgba;
+          this.cc.fill();
+          if(center.rtx!=0) {
+              this.cc.rotate(-1*rtx*Math.PI/180);
+              this.cc.translate(-1*center.x, -1*center.y);
+          }
+          center.x=exCenter.x;
+          center.y=exCenter.y;
+      },
+      spectrumAnalyse: function() {
+          // for logo
+          /*
+          var out=[];
+          var freqByteData = new Uint8Array(this.analyser.frequencyBinCount);
+          this.analyser.getByteFrequencyData(freqByteData);
+          var length = freqByteData.length;
+          var ww=this.center.length, height=10;
+          this.variables={"opacity":[], "rotate":[]};
+          for (var i = 0; i < ww; i++) {
+              var index = ~~(length / ww * i);
+              var value =  ~~(height - ((freqByteData[index] || 0) / 256 * height));
+              this.variables.opacity.push(value/10);
+          }
+           */
+          var out=[];
+          var a=[], sum=0;
+          var timeDomainData = new Uint8Array(this.analyser.frequencyBinCount);
+          this.analyser.getByteTimeDomainData(timeDomainData);
+          var length = timeDomainData.length;
+          var width=this.center.length, height=1;
+          this.variables={"opacity":[], "rotate":[]};
+          for (var i = 0; i < width; i++) {
+              var index = ~~(length / width * i);
+              var value =  (timeDomainData[index] || 0) / 128 ;
+              value=(Math.pow(value, 1/2));
+              this.variables.opacity.push(value);
+              sum+=Math.pow(value, 2);
+              a.push(value);
+          }
+          var rms=(20*Math.LOG10E * Math.log(sum/width)); // RMS
+          lRms=20*Math.pow(rms, 2);
+          if(lRms>1) lRms=1;
+          this.graph.line.color.opacity=lRms;
+          bRms=50*Math.pow(rms, 2); 
+          if(rms>=0.6) bRms=0.6; 
+          if(rms<=0.1) bRms=0.1;
+          this.graph.bar.color.opacity=bRms;
+
+          // for a line graph
+          this.graph.line.data=[];
+          var timeDomainData = new Uint8Array(this.analyser.frequencyBinCount);
+          this.analyser.getByteTimeDomainData(timeDomainData);
+          var length = timeDomainData.length;
+          var width=this.canvas.width, height=this.canvas.height;
+          var ww=30;
+          for (var i = 0; i < ww; i++) {
+              var index = ~~(length / width * i);
+              var value =  height/2*(timeDomainData[index] || 0) / 128 ;
+              this.graph.line.data.push({"x":i*width/ww, "y":value});
+          }
+
+          // for a bar graph
+          this.graph.bar.data=[];
+          var freqByteData = new Uint8Array(this.analyser.frequencyBinCount);
+          this.analyser.getByteFrequencyData(freqByteData);
+          var length = freqByteData.length;
+          var width=this.canvas.width, height=this.canvas.height;
+          var ww=this.graph.bar.number;
+          for (var i = 0; i < ww; i++) {
+              var index = ~~(length / width * i);
+              var value = ~~( ((freqByteData[index] || 0) /1024) * height);
+              this.graph.bar.data.push({"x":i*width/ww, "y":value});
+          }
+
+      }
+  });
+  </script>
+</polymer-element>

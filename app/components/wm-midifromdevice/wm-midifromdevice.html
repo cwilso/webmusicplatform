@@ -1,0 +1,158 @@
+<!--
+Copyright (c) 2014 Yamaha Corporation. All rights reserved.
+Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+-->
+<link rel="import" href="../wm-platform/wm-resourcemanager.html">
+<polymer-element name="wm-midifromdevice" extends="wm-resourcemanager" attributes="">
+  <template>
+    <link rel="stylesheet" href="../../css/reset.css">
+    <link rel="stylesheet" href="../../css/elements.css">
+    <style type="text/css">
+    .outerline {
+      width:329px; 
+      height:67px; 
+      float:left; 
+      margin:0px; 
+      padding:10px; 
+      background-color:#ffffff; 
+      border-radius:0px; 
+      border:0px solid #dddddd; 
+      z-index:1;
+    }
+    .top-title {
+      position:absolute;
+      top:0px;
+      left:0px;
+      width:100%;
+      border:0px solid #bbbbbb; 
+      background-color:rgba(83, 95, 107, 1) /*#6e6e6e*/; 
+      color:#eeeeee;
+      margin:0px; 
+      padding:5px 0px; 
+      border-radius:0px;
+    }
+    .msg-indicator {
+      position:absolute;
+      top:0px;
+      left:8px;
+      margin:5px 3px 0px 0px;
+      padding:0px;
+      background-color:rgba(221, 221, 221, 1);
+      float:left;
+      width:18px;
+      height:18px;
+      border-radius:50%;
+      transition:0.1s;
+      font-size:10px;
+    }
+    .on {
+      -webkit-animation: indicator 1s linear 0 infinite alternate;
+    }
+    @-webkit-keyframes indicator {
+        0% { background-color: rgba(225, 225, 255, 1); }
+      100% { background-color: rgba(94, 94 ,236, 1); }
+    }
+    .select-device {
+      margin:20px 0px 10px 0px; 
+      margin-top:10px; 
+      font-size:13px; 
+      width:auto; 
+      border:1px solid #999999;
+      padding:5px;
+      border-radius:0px;    
+    }
+    </style>
+    <div id="midifromdevice" class="outerline">
+      <span class="top-title"><span style="margin-left:32px;">MIDI From Devices</span></span><br>
+      <div id="msg-indicator" class="msg-indicator"></div>
+      <div style="">
+        <span><select id="midiinput" class="select-device" disabled="disabled"></select></span>
+      </div>
+    </div>
+  </template>
+  <script type="text/javascript">
+  Polymer('wm-midifromdevice', {
+      getComponentSize: function() {
+          return this.super();
+      },
+      enableControl: function() {
+          this.$["midiinput"].removeAttribute("disabled");
+          this.$["msg-indicator"].className="msg-indicator on";
+          this.connected=true;
+      },
+      disableControl: function() {
+          this.$["midiinput"].value=0;
+          this.$["midiinput"].setAttribute("disabled", "disabled");
+          this.connected=false;
+          this.$["msg-indicator"].className="msg-indicator";
+      },
+      get: function(name) {
+          return this[name];
+      },
+      setMIDIAccess: function(access) {
+          this.super([access]);
+          this.addDeviceToList();
+      },
+      getInputPort: function() {
+          return this.midi.inputs;
+      },
+      getOutputPort: function(name) {
+          return this.midi.outputs;
+      },
+      setMidiDevice: function(device) {
+          this.enableControl();
+          this.device=device;
+          //this.setOutput(device);
+          if(this.device.tgType=="webmidilink") {
+              this.tgtype="webmidilink";
+          } else {
+              this.tgtype="physical";
+          }
+      },
+      unsetMidiDevice: function() {
+          this.disableControl();
+          this.device=null;
+      },
+      publish: {
+      },
+      hello: function() {
+          this.super();
+      },
+      ready: function() {
+          this.hello();
+      },
+      midi: null, // midi access
+      device: null,
+      connected:false,
+      addDeviceToList: function() {
+          // for input
+          this.$["midiinput"].options[0]=new Option("(Select One)", 0);
+          for(var i=0; i<this.midi.inputs.length; i++) {
+              this.$["midiinput"].options[i+1]=new Option(this.midi.inputs[i].name, i+1);
+          }
+          var self=this;
+          this.$["midiinput"].addEventListener("change", function(event){
+              var idx=event.target.value-1;
+              self.midiinput=self.midi.inputs[idx];
+              self.midi.inputs[idx].onmidimessage=function(event) {
+                  if(self.connected==true) {
+                      self.device.send(event.data, 0);
+                      //self.updateMsgIndicator.bind(self)("");
+                      self.device.updateMsgIndicator(event.data[0].toString(16).substr(1, 1));
+                  }
+              }
+          });
+      },
+      updateMsgIndicator: function(ch) {
+          var self=this;
+          this.$["msg-indicator"].className="msg-indicator on";
+          setTimeout(function(){
+              self.$["msg-indicator"].className="msg-indicator";
+          }, 200);
+      },
+      fireEventByIdType: function (id, type) {
+          this.super([id, type]);
+      }
+  });
+  </script>
+</polymer-element>

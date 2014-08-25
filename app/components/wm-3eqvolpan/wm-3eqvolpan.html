@@ -1,0 +1,153 @@
+<!--
+Copyright (c) 2014 Yamaha Corporation. All rights reserved.
+Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+-->
+<link rel="import" href="../wm-platform/wm-resourcemanager.html">
+<!-script type="text/javascript" src="wm-platform/pointerevents.js"></script--> 
+<polymer-element name="wm-3eqvolpan" extends="wm-resourcemanager" attributes="">
+  <link rel="import" href="../webaudio-controls/controls.html">
+  <template>
+    <link rel="stylesheet" href="../../css/reset.css">
+    <link rel="stylesheet" href="../../css/elements.css">
+    <style type="text/css">
+    .outerline {
+      position:relative; // change conector's z-index to outerline, element, connector
+      top:0px;
+      left:0px;
+      float:left; 
+      margin:0px; 
+      padding:15px 20px; 
+      width:40px;
+      background-color:#ffffff; 
+      border-radius:0px; 
+      border:0px solid #dddddd; 
+    }
+    </style>
+    <div class="outerline">
+      <div style="padding:5px 0px;">
+        <webaudio-knob id="pan" src="../webaudio-controls/images/flatknob_red.png" sprites="30" value="0" min="-1" max="1" step="0.1" diameter="40"></webaudio-knob>
+      </div>
+      <div style="padding-bottom:10px;">
+        <webaudio-knob id="eqknobh" src="../webaudio-controls/images/flatknob_dpurple.png" sprites="30" value="0" min="-15" max="15" step="1" diameter="40"></webaudio-knob>
+        <webaudio-knob id="eqknobm" src="../webaudio-controls/images/flatknob_dpurple.png" sprites="30" value="0" min="-15" max="15" step="1" diameter="40"></webaudio-knob>
+        <webaudio-knob id="eqknobl" src="../webaudio-controls/images/flatknob_dpurple.png" sprites="30" value="0" min="-15" max="15" step="1" diameter="40"></webaudio-knob>
+      </div>
+      <div style="position:relative; left:8px; top:5px; padding-bottom:30px;">
+        <webaudio-slider id="gainslider" src="../components/webaudio-controls/images/fsliderbody.png" knobsrc="components/webaudio-controls/images/fsliderknob.png" value="80" min="0" max="200" step="1" basewidth="24" baseheight="36" knobwidth="24" knobheight="24" ditchlength="100" tooltip="" defvalue="0" height="128" width="24"></webaudio-slider>
+      </div>
+    </div>
+  </template>
+  <script type="text/javascript">
+  Polymer('wm-3eqvolpan', {
+//////////////////
+      getComponentSize: function() {
+          return this.super();
+      },
+      setAudioContext: function(ac) {
+          this.super([ac]);
+
+          this.eqL=this.ac.createBiquadFilter();
+          this.eqL.type = "lowshelf"; // 3
+          this.eqL.frequency.value = 440.0;
+          this.eqL.gain.value = 0;
+
+          this.eqM=this.ac.createBiquadFilter();
+          this.eqM.type = "peaking"; // 5
+          this.eqM.frequency.value = 1000.0;
+          this.eqM.Q.value = 1.0;
+          this.eqM.gain.value = 0;
+
+          this.eqH=this.ac.createBiquadFilter();
+          this.eqH.type = "highshelf"; // 4
+          this.eqH.frequency.value = 6000.0;
+          this.eqH.gain.value = 0;
+
+          this.gain=this.ac.createGain();
+          this.gain.gain.value=this.$["gainslider"].value/100;
+
+          this.pan=this.ac.createPanner();
+          this.pan.type=1;
+          this.gain.connect(this.pan);
+          
+          this.eqL.connect(this.eqM);
+          this.eqM.connect(this.eqH);
+          this.eqH.connect(this.gain);
+          
+      },
+      connectToNextNode: function(nn){
+          this.pan.connect(nn);
+      },
+      disconnectFromNextNode: function(){
+          this.pan.disconnect();
+      },
+      getInputNode: function() {
+          return this.eqL;
+      },
+      //////////////////
+      
+      publish: {
+      },
+      hello: function() {
+          this.super();
+      },
+      setIgnoreDragging: function(elems) {
+          this.super([elems]);
+      },
+      ready: function() {
+          this.hello();
+          var self=this;
+          this.$["gainslider"].addEventListener("change", function(event){
+              self.gain.gain.value=self.$["gainslider"].value/100;
+          });
+
+          this.$["eqknobh"].addEventListener("change", function(event){
+              self.eqH.gain.value=self.$["eqknobh"].value;
+          });
+          this.$["eqknobh"].addEventListener("dblclick", function(event){
+              self.$["eqknobh"].setValue(0, true);
+          });
+
+          this.$["eqknobm"].addEventListener("change", function(event){
+              self.eqM.gain.value=self.$["eqknobm"].value;
+          });
+          this.$["eqknobm"].addEventListener("dblclick", function(event){
+              self.$["eqknobm"].setValue(0, true);
+          });
+
+          this.$["eqknobl"].addEventListener("change", function(event){
+              self.eqL.gain.value=self.$["eqknobl"].value;
+          });
+          this.$["eqknobl"].addEventListener("dblclick", function(event){
+              self.$["eqknobl"].setValue(0, true);
+          });
+
+          this.$["pan"].addEventListener("change", function(event){
+              self.pan.setPosition(self.$["pan"].value, 0, 0);
+          });
+          this.$["pan"].addEventListener("dblclick", function(event){
+              self.$["pan"].setValue(0, true);
+          });
+
+          var ignoreDragList=[
+              this.$["gainslider"], this.$["eqknobh"], this.$["eqknobm"],
+              this.$["eqknobl"], this.$["pan"] 
+          ];
+          this.setIgnoreDragging(ignoreDragList);
+
+      },          
+      ac: null, // audioContext
+      nn: null, // nextNode that is connected from this node 
+      gain: null,
+      highEq: null,
+      midEq: null,
+      lowEq: null,
+      fireEventByIdType: function (id, type) {
+        var e=document.createEvent('MouseEvent');
+        var b=document.getElementById(id);
+        e.initEvent(type, true, true, window, 1, 0, 0, 0, 0, false, false, false, false, 0, null);
+        b.dispatchEvent(e);
+    }
+
+  });
+  </script>
+</polymer-element>

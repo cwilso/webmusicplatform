@@ -1,0 +1,228 @@
+<!--
+Copyright (c) 2014 Yamaha Corporation. All rights reserved.
+Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+-->
+<link rel="import" href="../wm-platform/wm-resourcemanager.html">
+<polymer-element name="wm-smfPlayer" extends="wm-resourcemanager" attributes="">
+  <template>
+    <link rel="stylesheet" href="../../css/reset.css">
+    <link rel="stylesheet" href="../../css/elements.css">
+    <style type="text/css">
+    .outerline {
+      float:left; 
+      margin:0px; 
+      padding:10px; 
+      width:200px;
+      height:194px; 
+      background-color:#ffffff; 
+      border:0px solid #dddddd; 
+      z-index:1;
+    }
+    .msg-indicator {
+      position:absolute;
+      top:0px;
+      left:8px;
+      margin:5px 3px 0px 0px;
+      padding:0px;
+      background-color:rgba(221, 221, 221, 1);
+      float:left;
+      width:18px;
+      height:18px;
+      border-radius:50%;
+      transition:0.1s;
+      font-size:10px;
+    }
+    .on {
+      -webkit-animation: indicator 1s linear 0 infinite alternate;
+    }
+    @-webkit-keyframes indicator {
+        0% { background-color: rgba(225, 225, 255, 1); }
+      100% { background-color: rgba(94, 94 ,236, 1); }
+    }
+    .top-title {
+      position:absolute;
+      top:0px;
+      left:0px;
+      width:100%;
+      border:0px solid #bbbbbb; 
+      background-color:rgba(83, 95, 107, 1) /*#6e6e6e*/; 
+      color:#eeeeee;
+      margin:0px; 
+      padding:5px 0px; 
+      border-radius:0px;
+    }
+    .select-device {
+      position:relative;
+      top:20px;
+      width:190px;
+      margin:20px 0px 10px 0px; 
+      margin-top:10px; 
+      font-size:13px; 
+      border:1px solid #999999;
+      padding:5px;
+      border-radius:0px;    
+    }
+    .ctrl-buttons {
+      position:absolute;
+      width:240px;
+      top:153px;
+      left:0px;
+    }
+    </style>
+    <div id="smfplayer" class="outerline">
+      <span class="top-title"><span style="margin-left:32px;">SMF Player</span></span></div><span id="progress"></span><br>
+      <div id="msg-indicator" class="msg-indicator">
+      <select id="smfList" size="6" class="select-device"></select>
+      <div class="ctrl-buttons">
+        <button id="start" disabled="disabled">START</button>
+        <button id="stop" disabled="disabled">STOP</button>
+        <button id="panic" disabled="disabled">PANIC</button>
+      </div>
+    </div>
+  </template>
+  <script type="text/javascript" src="./js/smfParser.js"></script>
+  <script type="text/javascript" src="./js/smfPlayer.js"></script>
+  <script type="text/javascript">
+  Polymer('wm-smfPlayer', {
+      getComponentSize: function() {
+          return this.super();
+      },
+      enableControl: function() {
+          this.$["start"].removeAttribute("disabled");
+          this.$["stop"].removeAttribute("disabled");
+          this.$["panic"].removeAttribute("disabled");
+      },
+      disableControl: function() {
+          this.$["start"].setAttribute("disabled", "disabled");
+          this.$["stop"].setAttribute("disabled", "disabled");
+          this.$["panic"].setAttribute("disabled", "disabled");
+          this.$["msg-indicator"].className=this.$["msg-indicator"].className.replace(" on", " off");
+          this.fireEventByIdType("stop", "click");
+      },
+      setMIDIAccess: function(access) {
+          this.midi=access;
+      },
+      getInputPort: function() {
+          return this.midiinput;
+      },
+      getOutputPort: function(name) {
+          return this.midioutput;
+      },
+      setMidiDevice: function(device) {
+          this.enableControl();
+          this.device=device;
+          this.smfPl.setOutput(device);
+          if(this.device.tgType=="webmidilink") {
+              this.tgtype="webmidilink";
+          } else {
+              this.tgtype="physical";
+          }
+      },
+      unsetMidiDevice: function() {
+          if(this.device==null) {
+              return;
+          }
+          this.disableControl();
+          var stauts=this.smfPl.stopPlay();
+          var self=this;
+
+          var timerId=setInterval(function(){
+              if(status==true) {
+                  self.device=null;
+                  self.midioutput=null;
+                  self.smfPl.setOutput(null);
+                  clearInterval(timerId);
+              }
+          },500);
+      },
+      publish: {
+      },
+      hello: function() {
+          this.super();
+      },
+      ready: function() {
+          this.hello();
+          this.smfPs=new SmfParser();
+          this.smfPl=new SmfPlayer();
+
+          var da=this.$["smfList"];
+          da.ondragover=function(event) {
+              event.preventDefault();
+              this.style.setProperty("background-color", "#dddddd");
+          };
+          da.ondragend=da.ondragleave=function() {
+              this.style.setProperty("background-color", "#ffffff");
+          };
+          da.ondrop=fileLoad;
+
+          var self=this;
+
+          function fileLoad(event) {
+              this.style.removeProperty("background-color");
+              var file = event.dataTransfer.files[0];
+              if(typeof file=="undefined") return;
+              var reader = new FileReader();
+              reader.onload = function (event) {
+                  self.parsedMidi.push( {"name":file.name, "size":~~(file.size/1000), "data": self.smfPs.parse(event.target.result), "eventNo": 0});
+                  var Idx=self.parsedMidi.length-1;
+                  var mfList=self.$["smfList"];
+                  mfList.options[Idx]=new Option(self.parsedMidi[Idx].name+" ( "+ self.parsedMidi[Idx].size +" KB )", Idx);
+                  mfList.options[Idx].selected=true;
+                  
+                  dispBufferSize=30;
+                  dispChildCSize=200;
+                  //smfPlayer.dispEventMonitor=dispEventMonitor;
+                  
+              };
+              reader.readAsBinaryString(file);
+              event.preventDefault();
+              return false;
+          };
+  
+          var stopped=false;
+          var self=this;
+
+          this.$["start"].addEventListener("click", function(event) {
+              var idx=self.$["smfList"].value;
+              if(isNaN(parseInt(idx))) {
+                  return;
+              }
+
+              self.$["msg-indicator"].className="msg-indicator on";
+              if(self.tgtype=="webmidilink") {
+                  self.device.latency=self.latency;
+                  self.device.stime=window.performance.now();
+              }
+              
+              stopped=false;
+              self.smfPl.init(self.parsedMidi[idx].data, self.latency, self.parsedMidi[idx].eventNo);
+              self.smfPl.startPlay();
+          });
+          this.$["stop"].addEventListener("click", function(event) {
+              self.$["msg-indicator"].className="msg-indicator off";
+              self.smfPl.stopPlay();
+              stopped=true;
+          });
+          this.$["panic"].addEventListener("click", function(event) {
+              console.info("[send all sound off]");
+              //self.super([device]);               
+              self.smfPl.allSoundOff();
+          });
+
+      },
+      midi: null, // midi access
+      source: {},
+      midiinput: null,
+      midioutput: null,
+      smfPs: null,
+      smfPl: null,
+      parsedMidi:[],
+      latency: 800,
+      tgtype:null,
+      device:null,
+      fireEventByIdType: function (id, type) {
+          this.super([id, type]);
+      }
+  });
+  </script>
+</polymer-element>

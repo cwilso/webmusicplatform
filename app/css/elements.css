@@ -1,0 +1,50 @@
+select {
+  font-family: 'Nunito', sans-serif;
+  -webkit-appearance: button;
+  -moz-appearance: button;
+  appearance: button;
+  border-radius: 0;
+  border: 0;
+  margin: 5px;
+  padding: 0;
+  background: #dddddd;
+  opacity:0.4;
+  border-radius:0px;
+  padding:5px 20px 5px 20px;
+  vertical-align: middle;
+  font-size: inherit;
+  color: #000000;
+  border:2px solid #777777;
+  box-sizing: content-box;
+}
+
+
+button { 
+  font-family: 'Nunito', sans-serif;
+  font-size:13px;
+  display: inline-block;
+  padding:6px;
+  margin:4px 4px 4px 4px;
+  text-align: center;
+  text-decoration: none;
+  border-radius:20px;
+  transition:0.2s;
+  border:2px solid #7db500;
+  color:#7db500;
+  background-color: rgba(255, 255, 255, 1);
+}
+button:hover {
+  color: #a0e800;
+  border:2px solid #a0e800;
+}
+button:active {
+  color: #496900;
+  border:2px solid #496900;
+  -webkit-box-shadow: inset 0px 1px 0px rgba(255, 255, 255, 0.5), 0px 1px 2px rgba(0, 0, 0, 0.15);
+  box-shadow: inset 0px 1px 0px rgba(255, 255, 255, 0.5), 0px 1px 2px rgba(0, 0, 0, 0.15);
+}
+button:focus {outline:0;}
+button[disabled=disabled], button:disabled {
+  color:rgba(200, 200, 200, 1);
+  border:2px solid rgba(200, 200, 200, 1);
+}

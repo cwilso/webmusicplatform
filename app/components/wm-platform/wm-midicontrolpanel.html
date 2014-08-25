@@ -1,0 +1,188 @@
+<link rel="import" href="../wm-platform/wm-resourcemanager.html">
+<polymer-element name="wm-midicontrolpanel" extends="wm-resourcemanager" attributes="dispinput dispoutput">
+  <template>
+    <style type="text/css">
+    h2.title {
+      padding: 10px 0px 5px 0px;
+      margin: 0px;
+    }
+    h3.title {
+      padding: 10px 0px 10px 10px;
+      margin: 0px;
+    }
+    h4.item-name {
+      font-weight:normal;
+    }
+    .midi-control-area {
+      padding: 0px 20px;
+    }
+    div.between-items {
+      padding: 0px;
+      margin: 0px;
+    }
+    paper-checkbox {
+      padding: 20px;
+    }
+    paper-checkbox.blue::shadow #ink[checked] {
+      color: #4285f4;
+    }
+    paper-checkbox.blue::shadow #checkbox.checked {
+      border-color: #4285f4;
+    }
+    </style>
+    
+    <div class="midi-control-area">
+      <template if="{{dispinput}} || {{dispoutput}}">
+        <h2 class="title">MIDI Connection</h2>
+      </template>
+      <template if="{{dispinput}}">
+        <h3 class="title">INPUT (From Device)</h3>
+        <section id="midiconfigpanel-in"></section>
+      </template>
+      <template if="{{dispoutput}}">
+        <h3 class="title">OUTPUT (To Device)</h3>
+        <section id="midiconfigpanel-out"></section>
+      </template>
+    </div>
+    
+  </template>
+  <script type="text/javascript">
+  Polymer('wm-midicontrolpanel', {
+      midiConnection:{"input":[], "output":[]},
+      arrayOnMidiMessage:[],
+      parentIdName:null,
+      ready: function() {
+          this.midi=this.getMIDIAccess();
+console.log(this.midiConnection);
+          var self=this;
+          if(this.dispinput) {
+              for(var i=0; i<this.midiinputs.length; i++) {
+                  var od=document.createElement("div");
+                  od.setAttribute("horizontal", "horizontal");
+                  od.setAttribute("layout", "layout");
+                  od.style.setProperty("height", "50px");
+
+                  var pcb=document.createElement("paper-checkbox");
+                  pcb.id="midiconfigpanel_input-"+i;
+                  pcb.className="blue";
+                  
+                  var nd=document.createElement("div");
+                  nd.setAttribute("vertival", "vertical");
+                  nd.setAttribute("horizontal", "horizontal");
+                  
+                  var dh=document.createElement("h4");
+                  dh.className="item-name";
+                  dh.innerHTML=this.midiinputs[i].name + " (" + this.midiinputs[i].manufacturer + ")";
+                  
+                  nd.appendChild(dh);
+                  od.appendChild(pcb);
+                  od.appendChild(nd);
+                  
+                  this.$["midiconfigpanel-in"].appendChild(od);
+
+                  var self=this;
+                  // set multiple onmidimessge
+                  var idx=i;
+                  this.midiinputs[idx].onmidimessage=function(message) {
+                      for(var i=0; i<self.midiConnection.input.length; i++) {
+                          if(self.midiConnection.input[i]==true) {
+//                              console.log("[true??]", i, self.midiConnection.input);
+                              for(var j=0; j<window.onmidimessagelist.length; j++){
+                                  if(i==window.onmidimessagelist[j].id.split("_").pop()) {
+                                      console.log("-----", i, window.onmidimessagelist[j].id.split("_").pop());
+                                      window.onmidimessagelist[j].func(message);
+                                  }
+                              }
+                          }
+                      }
+
+                      for(var ii=0; ii<self.onmidimessagelist.length; ii++) {
+                          if(self.onmidimessagelist[ii].status==true) {
+                              console.log("[SEND] ", ii);
+                              self.onmidimessagelist[ii].func(message);
+                              console.log("[MIDI message]", message.target.id, message.data);
+                          }
+                      }
+                  }
+
+                  pcb.addEventListener("change", function(event){
+                      console.log(event.target.id);
+                      var type=event.target.id.split("_").pop().split("-").shift();
+                      var idx=event.target.id.split("_").pop().split("-").pop();
+
+                      if(typeof self.midiConnection.input[idx]=="undefined") {
+                          self.midiConnection.input[idx]=false;
+                      }
+
+                      if(self.midiConnection.input[idx]===false){
+                          self.midiConnection.input[idx]=true;
+                      } else {
+                          self.midiConnection.input[idx]=false;
+                      }
+                      console.log(idx, self.midiConnection);
+                  });
+                  
+              }
+          }
+  
+          if(this.dispoutput) {
+              for(var i=0; i<this.midioutputs.length; i++) {
+                  var od=document.createElement("div");
+                  od.setAttribute("horizontal", "horizontal");
+                  od.setAttribute("layout", "layout");
+                  od.style.setProperty("height", "50px");
+                  
+                  var pcb=document.createElement("paper-checkbox");
+                  pcb.id="midiconfigpanel_output-"+i;
+                  pcb.className="blue";
+                  
+                  var nd=document.createElement("div");
+                  nd.setAttribute("vertival", "vertical");
+                  nd.setAttribute("horizontal", "horizontal");
+                  
+                  var dh=document.createElement("h4");
+                  dh.className="item-name";
+                  dh.innerHTML=this.midioutputs[i].name + " (" + this.midioutputs[i].manufacturer + ")";
+
+                  nd.appendChild(dh);
+                  od.appendChild(pcb);
+                  od.appendChild(nd);
+                  
+                  this.$["midiconfigpanel-out"].appendChild(od);
+                  pcb.addEventListener("change", function(event){
+                      var tmp=event.target.id.split("_").pop().split("-");
+                      var idx=tmp[1];
+                      var type=tmp[0];
+                      console.log("clicked!", idx, type); 
+                 });
+                  
+              }
+          }
+          //console.log("[[[[[[[[[", this.getSelfIdName());
+      },
+      addOnMidiMessageList: function (id, func) {
+          this.parentIdName=id;
+          if(typeof this.onmidimessagelist=="undefined") {
+              this.onmidimessagelist=[];
+          }
+          // idx:sequence id of Custom Processing Module ,id:Element's id
+          window.onmidimessagelist.push({"id":id, "func": func, "status": false});
+          console.log("[after] ", window.onmidimessagelist);
+      },
+                  
+      removeOnMidiMessageList: function (idx, id, func) {
+          for(var i=0; i<this.midiinputs[idx].ommidimessagelist.length; i++) {
+              if(this.midiinputs[idx].ommidimessagelist[i].id==id
+                 && this.midiinputs[idx].ommidimessagelist[i].func==func) {
+                  this.midiinputs[idx].ommidimessagelist[i].splice(i, 1);
+              }
+          }
+      },
+      sendmidimessage: function(msg) {
+      },
+      getSelfIdName: function() {
+          return this.super();
+      }
+  });
+</script>
+</polymer-element>

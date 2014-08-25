@@ -1,0 +1,317 @@
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+	  <meta charset="utf-8" />
+    <title>Web Music Platform Powerd by Polymer</title>
+
+<!--
+    <script src="//cdnjs.cloudflare.com/ajax/libs/polymer/0.2.4/polymer.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/polymer/0.2.4/platform.js"></script>
+-->
+    <script type="text/javascript" src="js/platform.js"></script>
+    <link rel="import" href="./components/material-design/core-drawer-panel/core-drawer-panel-c.html">
+    <link rel="import" href="./components/material-design/core-menu/core-menu.html">
+    <link rel="import" href="./components/material-design/core-menu/core-submenu.html">
+    <link rel="import" href="./components/material-design/core-icons/core-icons.html">
+    <link rel="import" href="./components/material-design/core-icon/core-icon.html">
+    <link rel="import" href="./components/material-design/core-item/core-item.html">
+    <link rel="import" href="./components/material-design/paper-button/paper-button.html">
+    <link rel="import" href="./components/material-design/core-header-panel/core-header-panel.html">
+    <link rel="import" href="./components/material-design/paper-shadow/paper-shadow.html">
+
+    <!--script src="js/polymer.js"></script-->
+    <link rel="stylesheet" href="css/reset.css">
+    <link rel="stylesheet" href="css/elements.css">
+    <link rel="stylesheet" href="css/main.css">
+
+    <link rel="import" href="components/wm-platform/wm-platform.html">
+  </head>
+  <body unresolved>
+
+    <core-drawer-panel id="components_drawer" responsiveWidth="99999px">
+      
+      <div drawer id="drawer" class="card-inner paper-shadow-right paper-shadow-bottom-z-4">
+        <core-header-panel id="component_drawer_menu" mode="seamed">
+          <div class="core-header card-inner paper-shadow-bottom paper-shadow-bottom-z-1">Web Music Platform</div>
+          <div class="content">
+            
+            <section><!-- core-menu -->
+              <core-menu id="available-components"></core-menu>
+            </section><!-- ./core-menu -->
+            
+          </div>
+        </core-header-panel>
+      </div>
+
+      <div main id="main_panel">
+        <svg id="svgCanvas" xmlns="http://www.w3.org/2000/svg" version="1.1" style="width:100%; height:100%; position:absolute; top:0; left:0; z-index:1;">
+          <defs>
+            <linearGradient id="wal_a_0">
+              <stop offset="0.5" stop-color="#699438"/>
+            </linearGradient>
+            <linearGradient id="wal_a_2">
+              <stop offset="0.1" stop-color="#699438"/>
+              <stop offset="0.2" stop-color="rgba(247, 252, 254, 1)"></stop>
+              <stop offset="0.3" stop-color="#699438"/>
+            </linearGradient>
+            <linearGradient id="wal_a_4">
+              <stop offset="0.3" stop-color="#699438"/>
+              <stop offset="0.4" stop-color="rgba(247, 252, 254, 1)"></stop>
+              <stop offset="0.5" stop-color="#699438"/>
+            </linearGradient>
+            <linearGradient id="wal_a_6">
+              <stop offset="0.5" stop-color="#699438"/>
+              <stop offset="0.6" stop-color="rgba(247, 252, 254, 1)"></stop>
+              <stop offset="0.7" stop-color="#699438"/>
+            </linearGradient>
+            <linearGradient id="wal_a_8">
+              <stop offset="0.7" stop-color="#699438"/>
+              <stop offset="0.8" stop-color="rgba(247, 252, 254, 1)"></stop>
+              <stop offset="0.9" stop-color="#699438"/>
+            </linearGradient>
+            <linearGradient id="wal_b_0">
+              <stop offset="0.0" stop-color="#699438"/>
+            </linearGradient>
+            <linearGradient id="wal_b_1">
+              <stop offset="0.0" stop-color="#699438"/>
+              <stop offset="0.2" stop-color="rgba(172, 205, 133, 1)"></stop>
+              <stop offset="0.4" stop-color="#699438"/>
+              <stop offset="0.6" stop-color="rgba(172, 205, 133, 1)"></stop>
+              <stop offset="0.8" stop-color="#699438"/>
+              <stop offset="1.0" stop-color="rgba(172, 205, 133, 1)"></stop>
+            </linearGradient>
+            <linearGradient id="wal_b_2">
+              <stop offset="0.0" stop-color="rgba(172, 205, 133, 1)"></stop>
+              <stop offset="0.2" stop-color="#699438"/>
+              <stop offset="0.4" stop-color="rgba(172, 205, 133, 1)"></stop>
+              <stop offset="0.6" stop-color="#699438"/>
+              <stop offset="0.8" stop-color="rgba(172, 205, 133, 1)"></stop>
+              <stop offset="1.0" stop-color="#699438"/>
+            </linearGradient>
+          </defs>
+        </svg>
+
+        <!--<webmusic-simplemeter id="mmeter" class="destination-meter" style="z-index:9999999998;"></webmusic-simplemeter>-->
+          <wm-stereoingicator id="mmeter" class="destination-meter card-inner paper-shadow-bottom paper-shadow-bottom-z-2" style="z-index:9999999998; background-color:#000000;"></wm-stereoingicator>
+	        <div id="destination_p" class="destination webaudio" style="z-index:9999999998;">
+		        <div class="node input node-input webaudio"><span id="destination" class="node-button webaudio">&nbsp;</span></div>
+	        </div> <!-- /#destination -->
+        <div id="main_container" class="container">
+          <wm-platform id="wmPl" workarea_name="component_canvas" dst_ext="mmeter"></wm-platform>
+          <section id="component_canvas" class="container"></section>
+        </div>
+        <div class="menu-sidedrawer-humberger">
+          <paper-shadow id="menu-button-shadow" z="1" hasPosition="true" style="left:100px;"></paper-shadow>
+          <paper-icon-button id="drawer_open" class="fill menu-icon" icon="menu" focused></paper-icon-button>
+        </div>
+
+      </div>
+    </core-drawer-panel>
+
+    
+    <script type="text/javascript">
+    window.addEventListener("polymer-ready", function(event) {
+        var bf=document.getElementById("wmPl");
+        console.log("[Polymer Ready]");
+        console.log("[AudioContext] ", bf.ac);
+        var manifest=bf.getPluginsList();
+        var xpa=document.getElementById("xplugins-audio");
+        var xpm=document.getElementById("xplugins-midi");
+
+        var selectA={ "name": "(Select Audio)" };
+        var selectM={ "name": "(Select MIDI)" };
+
+        var manif={"audio":[selectA], "midi":[selectM]};
+        for(var i=0; i<manifest.length; i++) {
+            if(manifest[i].disp_in_list==true) {
+                if(manifest[i].use=="webaudio") {
+                    manif.audio.push(manifest[i]);
+                } else 
+                if(manifest[i].use=="webmidi") {
+                    manif.midi.push(manifest[i]);
+                }
+            }
+        }
+
+        // to core-menu
+        var target=document.getElementById("available-components");
+
+        // audio
+        var csm=document.createElement("core-submenu");
+        csm.setAttribute("label", "Audio");
+        var sp=document.createElement("span")
+        sp.setAttribute("flex", "");
+        sp.setAttribute("class", "item-content");
+        csm.appendChild(sp);
+/*
+        var cicon=document.createElement("core-icon")
+        cicon.setAttribute("icon", "expand-more");
+        cicon.setAttribute("class", "item-content");
+        csm.appendChild(cicon);
+*/
+        for(var i=0; i<manif.audio.length; i++) {
+            if(i==0) continue;
+            var citem=document.createElement("core-item");
+            citem.setAttribute("id", "audio_"+i);
+            var pb=document.createElement("paper-button");
+            pb.setAttribute("label", manif.audio[i].name);
+            pb.addEventListener("pointerdown", addComponentP, false);
+            citem.appendChild(pb);
+            csm.appendChild(citem);
+        }
+
+        target.appendChild(csm);;
+
+        // midi
+        var csm=document.createElement("core-submenu");
+        csm.setAttribute("label", "MIDI");
+        var sp=document.createElement("span")
+        sp.setAttribute("flex", "");
+        sp.setAttribute("class", "item-content");
+        csm.appendChild(sp);
+/*
+        var cicon=document.createElement("core-icon")
+        cicon.setAttribute("icon", "expand-more");
+        cicon.setAttribute("class", "item-content");
+        csm.appendChild(cicon);
+*/
+
+        for(var i=0; i<manif.midi.length; i++) {
+            if(i==0) continue;
+            var citem=document.createElement("core-item");
+            citem.setAttribute("id", "midi_"+i);
+            var pb=document.createElement("paper-button");
+            pb.setAttribute("label", manif.midi[i].name);
+            pb.addEventListener("pointerdown", addComponentP, false);
+            citem.appendChild(pb);
+            csm.appendChild(citem);
+        }
+
+        target.appendChild(csm);;
+
+
+        function addComponent(event) {
+            var idx=document.getElementById(event.target.id).value;
+            if(isNaN(idx) || idx==0) return;
+            var mf;
+            if(event.target.id=="xplugins-audio") {
+                mf=manif.audio[idx];
+            }
+            if(event.target.id=="xplugins-midi") {
+                mf=manif.midi[idx];
+            }
+            var elem=document.createElement(mf.tag_name);
+            for(var i=0; i<mf.attributes.length; i++) {
+                var m=mf.attributes[i];
+                var k=Object.keys(m)
+                elem.setAttribute(k, m[k]);
+            }
+            
+            bf.addComponent(mf, elem);
+
+            document.getElementById(event.target.id).value=0;
+        }
+
+        function addComponentP(idx) {
+            if(isNaN(idx[1]) || idx[1]==0) return;
+            var mf;
+            if(idx[0]=="audio") {
+                mf=manif.audio[idx[1]];
+            }
+            if(idx[0]=="midi") {
+                mf=manif.midi[idx[1]];
+            }
+           var elem=document.createElement(mf.tag_name);
+            for(var i=0; i<mf.attributes.length; i++) {
+                var m=mf.attributes[i];
+                var k=Object.keys(m)
+                elem.setAttribute(k, m[k]);
+            }
+            bf.addComponent(mf, elem);
+            
+            document.getElementById(idx.join("_")).value=0;
+        }
+
+
+    var self=this;
+    document.getElementById("drawer_open").addEventListener("click", toggleDrawer, false);
+    /*
+    document.querySelector("#drawer").addEventListener("mouseout", function(event) {
+        //toggleDrawer();
+    }, false);
+     */
+    function toggleDrawer(event) {
+        document.getElementById("components_drawer").togglePanel();
+    }
+
+    // event from core-drawer-panel
+    window.addEventListener("core-select-change", function(event){
+        var cd=document.getElementById("components_drawer");
+        var mc=document.getElementById("main_container");
+        var sc=document.getElementById("svgCanvas");
+        var mm=document.getElementById("mmeter");
+        var ds=document.getElementById("destination_p");
+        var mh=document.querySelector(".menu-sidedrawer-humberger");
+        var b_left="200px"
+        if(event.detail.selected=="drawer") {
+            cd.style.setProperty("z-index", 9999999999);
+            sc.style.setProperty("z-index", 0);
+            mc.style.setProperty("z-index", 0);
+            mm.style.setProperty("z-index", 0);
+            ds.style.setProperty("z-index", 0);
+            mh.style.setProperty("left", b_left);
+            mh.style.setProperty("top", "44px");
+        } else {
+            setTimeout(function(){
+                cd.style.setProperty("z-index", 2);
+                mc.style.removeProperty("z-index");
+                mm.style.setProperty("z-index", 9999999998);
+                ds.style.setProperty("z-index", 9999999998);
+            }, 400);
+            mh.style.setProperty("left", "10px");
+            mh.style.setProperty("top", "10px");
+        }
+
+        var mbs=document.querySelector("#menu-button-shadow");
+        if(mbs.z!=1) {
+            mbs.z=1;
+        } else {
+            mbs.z=1;
+        }
+
+    });
+
+    // event from core-item
+    document.addEventListener("core-activate", function(event) {
+        if(event.detail.item.tagName=="CORE-ITEM") {
+            addComponentP(event.detail.item.id.split("_"));
+        }
+    }, false);
+
+
+/*
+        document.querySelector('paper-dialog').$["overlay"].backdrop=true;
+        document.getElementById("listComponents").addEventListener("click", function(event){
+            toggleDialog('paper-dialog-transition-center');
+            function toggleDialog(transition) {
+                var dialog = document.querySelector('paper-dialog[transition=' + transition + ']');
+                dialog.toggle();
+                document.querySelector('paper-dialog').style.setProperty("z-index", "9999999999");
+            }
+        });
+*/
+    });
+    </script>
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+                             m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+                             })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    
+    ga('create', 'UA-48405802-1', 'auto');
+    ga('send', 'pageview');
+    
+    </script>
+  </body>
+</html>

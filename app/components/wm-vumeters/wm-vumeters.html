@@ -1,0 +1,137 @@
+<!--
+Copyright (c) 2014 Yamaha Corporation. All rights reserved.
+Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+-->
+<link rel="import" href="../wm-platform/wm-resourcemanager.html">
+<polymer-element name="wm-vumeters" extends="wm-resourcemanager" attributes="destination">
+  <template>
+    <style type="text/css">
+    .outerline {
+      position:relative; // change conector's z-index to outerline, element, connector
+      float:left; 
+      margin:0px; 
+      padding:4px; 
+      background-color:rgbz(190, 190, 190, 1); 
+      border-radius:0px; 
+      border:0px solid #dddddd; 
+    }
+    .vumeter {
+      /* background: url("./images/meter_blue.png") left -600px no-repeat; */
+      background-image:url("./images/meter_blue.png");
+      background-position:left 0px;
+      backrdound-repeat:no-repeat;
+      background-size:100%;
+      width:128px;
+      height:94px;
+    }
+    </style>
+    <div id="outerline" class="outerline">
+      <div id="vumeter" class="vumeter"></div>
+    </div> 
+  </template>
+  <script type="text/javascript">
+  Polymer('wm-vumeters', {
+      vuType: [
+          {
+              "image":"./wm-vumeters/images/meter_blue.png",
+              "width": 128,
+              //"height":3200,
+              "height":100,
+              "scene": 31,
+          },
+          {
+              "image":"./wm-vumeters/images/Mvubluered1c.png",
+              "width": 128,
+              //"height":2914,
+              "height":94,
+              "scene": 29,
+          },
+          {
+              "image":"./wm-vumeters/images/meter_black.png",
+              "width": 128,
+              //"height":4096,
+              "height":128,
+              "scene": 31,
+          },
+          {
+              "image":"./wm-vumeters/images/vu3.png",
+              "width": 120,
+              //"height":3120,
+              "height":80,
+              "scene": 38,
+          },
+      ],
+      idName: null,
+      getComponentSize: function() {
+          return this.super();
+      },
+      setAudioContext: function(ac) {
+          this.super([ac]);
+          if(!this.analyser) {
+              this.analyser=this.ac.createAnalyser();
+              this.analyser.smoothingTimeConstant = 0.3;
+          }
+      },
+      toggleFormation: function(){
+      },
+      connectToNextNode: function(nn){
+          this.analyser.connect(nn);
+      },
+      disconnectFromNextNode: function(){
+          this.analyser.disconnect();
+      },
+      getInputNode: function() {
+          this.draw();
+          return this.analyser;
+      },
+      ready: function(){
+          this.hello();
+          var self=this;
+          this.$["vumeter"].addEventListener("mousedown", function(event){
+              var oc=document.getElementById(self.idName);
+              setTimeout(function() {
+                  self.fire("updated-connectorPosMove", {"id":self.idName});
+              }, 5);
+              self.type++;
+              if(self.type>self.vuType.length-1) self.type=0;
+              self.changeUI();
+          });
+
+      },
+      changeUI: function() {
+          this.$["vumeter"].style.setProperty("background-image", "url(./components/" + this.vuType[this.type].image + ")");
+          this.$["vumeter"].style.setProperty("background-position", "left 0px");
+          this.$["vumeter"].style.setProperty("background-repeat", "no-repeat");
+          this.$["vumeter"].style.setProperty("width", this.vuType[this.type].width+"px");
+          this.$["vumeter"].style.setProperty("height", this.vuType[this.type].height +"px");
+      },
+      type:0,
+      hello: function() {
+          this.super();
+      },
+      draw: function() {
+          this.spectrumAnalyse();
+          this.timerId=requestAnimationFrame(this.draw.bind(this));
+      },
+      cancelDraw: function() {
+          cancelAnimationFrame(this.timerId);
+      },
+      spectrumAnalyse: function() {
+          var max=0;
+          var timeDomainData = new Uint8Array(this.analyser.frequencyBinCount);
+          this.analyser.getByteTimeDomainData(timeDomainData);
+          max=Math.max.apply({}, timeDomainData);
+          var vu=Math.round(100*(max-128)/127);
+          this.moveVU(vu);
+      },
+      moveVU: function(value) {
+          var a=this.vuType[this.type].height;
+          var s=this.vuType[this.type].scene;
+          vu= Math.floor((s*(parseInt(value)/100)));
+          if(vu>=s) vu=s;
+          vu=-1*a*vu;
+          this.$["vumeter"].style.setProperty("background-position", "left "+ vu +"px");
+      }
+  });
+  </script>
+</polymer>

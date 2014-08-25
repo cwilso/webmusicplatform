@@ -1,0 +1,123 @@
+<!--
+Copyright (c) 2014 Yamaha Corporation. All rights reserved.
+Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+-->
+<link rel="import" href="../wm-platform/wm-resourcemanager.html">
+<polymer-element name="wm-simpleingicator" extends="wm-resourcemanager" attributes="destination">
+  <template>
+    <style type="text/css">
+    .simplemeter {
+      /* background: url("./images/meter_blue.png") left -600px no-repeat; */
+      background-image:url("./images/led_meter.png");
+      background-position:left 0px;
+      backrdound-repeat:no-repeat;
+      background-size:100%;
+      width:128px;
+      height:32px;
+      margin-top:-2px;
+    }
+    </style>
+    <div style="width:120px;height:28px; background-color:rgba(30, 30, 30, 1); border-top-right-radius:3px;border-bottom-right-radius:3px; border:1px solid #000000;">
+      <div id="simplemeter" class="simplemeter"></div>
+    </div>
+  </template>
+  <script type="text/javascript">
+  Polymer('wm-simpleingicator', {
+      vuType: [
+          {
+              "image":"./images/led_meter.png",
+              "width": 128,
+              //"height":3200,
+              "height":32,
+              "scene": 36,
+          },
+      ],
+      idName: null,
+      getComponentSize: function() {
+          return this.super();
+      },
+      setAudioContext: function(ac) {
+          this.super([ac]);
+          if(!this.analyser) {
+              this.analyser=this.ac.createAnalyser();
+              this.analyser.smoothingTimeConstant = 0.3;
+          }
+      },
+      toggleFormation: function(){
+      },
+      connectToNextNode: function(nn){
+          this.analyser.connect(nn);
+      },
+      disconnectFromNextNode: function(){
+          this.analyser.disconnect();
+      },
+      getInputNode: function() {
+          return this.analyser;
+      },
+      ready: function(){
+          this.hello();
+          var self=this;
+          this.$["simplemeter"].addEventListener("mousedown", function(){
+              self.type++;
+              if(self.type>self.vuType.length-1) self.type=0;
+              self.changeUI();
+          });
+
+          var self=this;
+          document.addEventListener("masterStart", function(event){
+              if(event.detail.slaves.contains(self.idName+"_p")) {
+                  self.start.bind(self)();
+              }
+          });
+          document.addEventListener("masterStop", function(event){
+              if(event.detail.slaves.contains(self.idName+"_p")) {
+                  self.stop.bind(self)();
+              }
+          });
+
+
+      },
+      changeUI: function() {
+          this.$["simplemeter"].style.setProperty("background-image", "url(./components/" + this.vuType[this.type].image + ")");
+          this.$["simplemeter"].style.setProperty("background-position", "left 0px");
+          this.$["simplemeter"].style.setProperty("background-repeat", "no-repeat");
+          this.$["simplemeter"].style.setProperty("width", this.vuType[this.type].width+"px");
+          this.$["simplemeter"].style.setProperty("height", this.vuType[this.type].height +"px");
+      },
+      type:0,
+      hello: function() {
+          this.super();
+      },
+      start: function(){
+          this.draw();
+      },
+      stop: function(){
+          this.cancelDraw();
+          this.moveVU(0);
+      },
+      draw: function() {
+          this.spectrumAnalyse();
+          this.timerId=requestAnimationFrame(this.draw.bind(this));
+      },
+      cancelDraw: function() {
+          cancelAnimationFrame(this.timerId);
+      },
+      spectrumAnalyse: function() {
+          var max=0;
+          var timeDomainData = new Uint8Array(this.analyser.frequencyBinCount);
+          this.analyser.getByteTimeDomainData(timeDomainData);
+          max=Math.max.apply({}, timeDomainData);
+          var vu=Math.round(100*(max-128)/127);
+          this.moveVU(vu);
+      },
+      moveVU: function(value) {
+          var a=this.vuType[this.type].height;
+          var s=this.vuType[this.type].scene;
+          vu= Math.floor((s*(parseInt(value)/100)));
+          if(vu>=s) vu=s;
+          vu=-1*a*vu;
+          this.$["simplemeter"].style.setProperty("background-position", "left "+ vu +"px");
+      }
+  });
+  </script>
+</polymer>

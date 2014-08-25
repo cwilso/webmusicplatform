@@ -1,0 +1,165 @@
+<!--
+Copyright (c) 2014 Yamaha Corporation. All rights reserved.
+Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+-->
+<link rel="import" href="../wm-platform/wm-resourcemanager.html">
+<polymer-element name="wm-oscilloscope" extends="wm-resourcemanager" attributes="width height">
+  <template>
+    <style type="text/css">
+    .outerline {
+      position:relative; // change conector's z-index to outerline, element, connector
+      float:left; 
+      margin:0px; 
+      padding:10px; 
+      background-color:#ffffff; 
+      border-radius:0px;
+      border:0px solid #dddddd; 
+    }
+    .a-canvas {
+      border: 0px solid #dddddd; 
+      border-radius:0px;
+    }
+    </style>
+    <div class="outerline">
+      <div><paper-slider id="sizeChange" min="1" max="5" value="1" step="0.2" class="sizeChange-input"></paper-slider></div>
+      <div id="banalyser" class="banalyser">
+        <canvas id="analyser" class="a-canvas"></canvas>
+      </div>
+    </div>
+  </template>
+  <script type="text/javascript">
+  Polymer('wm-oscilloscope', {
+      getComponentSize: function() {
+          return this.super(); 
+      },
+      setAudioContext: function(ac) {
+          this.super([ac]);
+          if(!this.analyser) {
+              this.analyser=this.ac.createAnalyser();
+              this.analyser.smoothingTimeConstant = 0.3;
+          }
+      },
+      connectToNextNode: function(nn){
+          this.analyser.connect(nn);
+      },
+      disconnectFromNextNode: function(){
+          this.analyser.disconnect();
+      },
+      getInputNode: function() {
+          return this.analyser;
+      },
+      setIgnoreDragging: function(elems) {
+          this.super([elems]);
+      },
+      ready: function(){
+          this.hello();
+          this.width=this.w;
+          this.height=this.h;
+          this.ce.cs=this.$["analyser"];
+          this.ce.cs.setAttribute("width", this.width);
+          this.ce.cs.setAttribute("height", this.height);
+          this.ce.cc=this.ce.cs.getContext("2d");
+          this.spectrumAnalyse("init");
+
+          var self=this;
+          this.ce.cs.addEventListener("mousedown", function(evet){
+              if(self.type=="frequencyBinCount") {
+                  self.type="frequencyByData";
+              } else if(self.type=="frequencyByData") {
+                  self.type="frequencyBinCount";
+              }
+          });
+
+          this.setIgnoreDragging([this.$["sizeChange"]]);
+
+          this.$["sizeChange"].addEventListener("change", function(event){
+              // need to updae line
+              self.width=Math.floor(event.target.value*self.w);
+              self.height=Math.floor(event.target.value*self.h);
+              self.updateCanvasSize(event);
+          });
+
+          var self=this;
+          document.addEventListener("masterStart", function(event){
+              if(event.detail.slaves.contains(self.idName+"_p")) {
+                  self.draw();
+              }
+          });
+          document.addEventListener("masterStop", function(event){
+              if(event.detail.slaves.contains(self.idName+"_p")) {
+                  setTimeout(function(){
+                      self.cancelDraw();
+                  }, 800);
+              }
+          });
+
+      },
+      ce: {"cs":null, "cc":null}, // ce:canvasElement, cs:canvas, cc:canvas context 
+      w:200,
+      h:100,
+      width:null,
+      height:null,
+      type: "frequencyBinCount",
+      hello: function() {
+          this.super();
+      },
+      updateCanvasSize: function(event) {
+          this.ce.cs.setAttribute("width", this.width);
+          this.ce.cs.setAttribute("height", this.height);
+          this.spectrumAnalyse("init");
+          this.fire("updated-connectorPosMove", {"id":this.id});
+      },
+      draw: function() {
+          this.spectrumAnalyse.bind(this)();
+          this.timerId=requestAnimationFrame(this.draw.bind(this));
+      },
+      cancelDraw: function() {
+          cancelAnimationFrame(this.timerId);
+          this.spectrumAnalyse("init");
+      },
+      spectrumAnalyse: function(mode) {
+          // canvas: clear and fill background
+          this.ce.cc.beginPath();
+          this.ce.cc.clearRect(0, 0, this.width, this.height);
+          this.ce.cc.fillStyle="rgba(0, 0, 0, 1)";
+          this.ce.cc.rect(0, 0, this.width, this.height);
+          this.ce.cc.stroke();
+          this.ce.cc.fill();
+          // initialize draw line
+          this.ce.cc.strokeStyle="rgba(230, 230, 230, 1)";
+          this.ce.cc.closePath();
+
+          this.ce.cc.beginPath();
+          if(mode=="init") return;
+
+          if(this.type=="frequencyBinCount") {
+              this.ce.cc.moveTo(0, 0);
+              var timeDomainData = new Uint8Array(this.analyser.frequencyBinCount);
+              this.analyser.getByteTimeDomainData(timeDomainData);
+              
+              for(var i=0; i<timeDomainData.length; i++) {
+              //for(var i=0; i<this.width; i++) {
+                  var idx=parseInt(i * timeDomainData.length / this.width );
+                  var value=parseInt(timeDomainData[idx] * this.height/256);
+                  this.ce.cc.lineTo(i, value);
+               }
+           } else if(this.type=="frequencyByData") {
+              this.ce.cc.moveTo(0, this.height);
+              var frequencyByData = new Uint8Array(this.analyser.frequencyBinCount);
+              this.analyser.getByteFrequencyData(frequencyByData);
+              
+              //for(var i=0; i<frequencyByData.length; i++) {
+              for(var i=0; i<this.width; i++) {
+                  var idx=parseInt(i *  frequencyByData.length / this.width);
+                  var value=parseInt( this.height - this.height * (frequencyByData[idx])/256 );
+                  this.ce.cc.lineTo(i, value);
+               }
+           }
+
+          this.ce.cc.stroke();
+          this.ce.cc.closePath();
+          
+      },
+  });
+  </script>
+</polymer>
