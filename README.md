@@ -15,10 +15,10 @@ This platform manages connection between each **"Custom Element Node"** (both Au
   - the Custom Element Nodes runs stand alone (e.g. embed on your Web page)
 
 ## Demo
-**TBA**
+[Web Music Platfrom](http://yamaha-webmusic.github.io/webmusicplatform/)  
 
-## Tutorial
-[Japnese](https://http://yamaha-webmusic.github.io/webmusicplatform/app/components/wm-skelton/)  
+## Document
+[Japnese](https://yamaha-webmusic.github.io/webmusicplatform/app/components/wm-skelton/)  
 
 ##  Concept
 Basic concept is almost same as [Web Audio Playground](http://webaudioplayground.appspot.com/) by Chris Wilson.  
