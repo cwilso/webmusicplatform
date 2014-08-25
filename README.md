@@ -18,7 +18,7 @@ This platform manages connection between each **"Custom Element Node"** (both Au
 [Web Music Platfrom](http://yamaha-webmusic.github.io/webmusicplatform/)  
 
 ## Document
-[Japnese](https://yamaha-webmusic.github.io/webmusicplatform/app/components/wm-skelton/)  
+[Japanese](https://yamaha-webmusic.github.io/webmusicplatform/app/components/wm-skelton/)  
 
 ##  Concept
 Basic concept is almost same as [Web Audio Playground](http://webaudioplayground.appspot.com/) by Chris Wilson.  
