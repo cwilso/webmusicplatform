@@ -2865,7 +2865,6 @@ Renderer.prototype.listitem = function(text) {
 };
 
 Renderer.prototype.paragraph = function(text) {
-  console.log(text);
   text=text.replace("|||", "<br>");
   text=text.replace("|(|", "{");
   text=text.replace("|)|", "}");
@@ -5800,7 +5799,6 @@ Displays formatted source documentation scraped from input urls.
       },
 
       assimilateData: function(data) {
-          console.log(data);
         this.classes = this.classes.concat(data.classes);
         this.classes.sort(function(a, b) {
           var na = a && a.name.toLowerCase(), nb = b && b.name.toLowerCase();
