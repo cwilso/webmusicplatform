@@ -36,7 +36,7 @@ Difference is Web Music Platfrom is supporting...
 ## Usage
 1. Pull the repository
 2. Copy them into your Web Server directory
-3. Access the URL where you copied them
+3. Access the URL where you copied them  
 
 ## Contribution
 **TBA**
