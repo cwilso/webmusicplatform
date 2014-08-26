@@ -30,7 +30,7 @@ Difference is Web Music Platfrom is supporting...
 
 ## Requirement
  - Web Server
- - Web Audio/MIDI readied Web Browser(e.x. [Google Chrome](https://www.google.co.jp/chrome/) )
+ - Web Audio/MIDI readied Web Browser(e.g. [Google Chrome](https://www.google.co.jp/chrome/) )
 
 
 ## Usage
