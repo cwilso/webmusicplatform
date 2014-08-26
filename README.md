@@ -10,7 +10,7 @@ This platform manages connection between each **"Custom Element Node"** (both Au
 
 ### Good thing to use this platform
  - this platform built on top of the Web Components and [Polymer](http://www.polymer-project.org/)
-  - developers does NOT need to worry about conflict (ex. class name, id name, method name and so on)
+  - developers does NOT need to worry about conflict (e.g. class name, id name, method name and so on)
   - easy to add Custom Element Node on your environment
   - the Custom Element Nodes runs stand alone (e.g. embed on your Web page)
 
