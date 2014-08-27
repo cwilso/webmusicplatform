@@ -1,0 +1,20 @@
+{
+  "name": "webmusicplatform",
+  "version": "0.1.0",
+  "authors": [
+    "Yamaha Corporation"
+  ],
+  "description": "Platform for creating Web Music",
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "polymer": "Polymer/polymer#~0.3.5",
+    "webaudio-controls": "*"
+  }
+}
