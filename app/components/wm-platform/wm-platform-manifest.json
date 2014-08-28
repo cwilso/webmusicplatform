@@ -16,7 +16,6 @@ var manifest={
       "disp_config_panel": false,
       "disp_in_list": true,
     },
-
     {
       "name": "Pan 3EQ Volume ",
       "description": "test",
@@ -41,8 +40,6 @@ var manifest={
       ],
       "node_type":{"input":true, "output":true},
       "allow_fullscreen":true,
-      //"flip_config":true,
-      "bottom_drawer":true,
       "disp_config_panel": true,
       "disp_in_list": true,
     },
