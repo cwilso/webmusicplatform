@@ -27,13 +27,15 @@ Difference is Web Music Platfrom is supporting...
  - supports MIDI(input/output)
  - applied Web Components and Polymer
 
+## How to Play & Develop Custom Element Node
+[How to Play](https://docs.google.com/document/d/1HyhPZdjDEGgbCCvprlfWsQ8ZCgcbZoR3HEmACrWyEJg/edit)  
+How to Develop Custom Element Node: TBD
 
 ## Requirement
  - Web Server
  - Web Audio/MIDI readied Web Browser(e.g. [Google Chrome](https://www.google.co.jp/chrome/) )
 
-
-## Usage
+## Setup Web Music Platform on your environment
 1. Pull the repository
 2. Copy them into your Web Server directory
 3. Access the URL where you copied them  
