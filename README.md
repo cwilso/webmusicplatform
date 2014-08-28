@@ -17,9 +17,6 @@ This platform manages connection between each **"Custom Element Node"** (both Au
 ## Demo
 [Web Music Platfrom](http://yamaha-webmusic.github.io/webmusicplatform/)  
 
-## Document
-[Japanese](https://yamaha-webmusic.github.io/webmusicplatform/app/components/wm-skelton/)  
-
 ##  Concept
 Basic concept is almost same as [Web Audio Playground](http://webaudioplayground.appspot.com/) by Chris Wilson.  
 Difference is Web Music Platfrom is supporting...
@@ -27,9 +24,13 @@ Difference is Web Music Platfrom is supporting...
  - supports MIDI(input/output)
  - applied Web Components and Polymer
 
-## How to Play & Develop Custom Element Node
-[How to Play](https://docs.google.com/document/d/1HyhPZdjDEGgbCCvprlfWsQ8ZCgcbZoR3HEmACrWyEJg/edit)  
-How to Develop Custom Element Node: TBD
+## Instructions for Users & Developers
+### Users' instruction
+[Tutorial](https://docs.google.com/document/d/1HyhPZdjDEGgbCCvprlfWsQ8ZCgcbZoR3HEmACrWyEJg/edit): Play audio file and display its waveform on oscilloscope.  
+
+### Developers' instruction
+Tutorial: TBD  
+[API Document](https://yamaha-webmusic.github.io/webmusicplatform/app/components/wm-skelton/)
 
 ## Requirement
  - Web Server
