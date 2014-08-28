@@ -30,7 +30,7 @@ Difference is Web Music Platfrom is supporting...
 
 ### Developers' instruction
 Tutorial: TBD  
-[API Document](https://yamaha-webmusic.github.io/webmusicplatform/app/components/wm-skelton/)
+[API Document(Japanese)](https://yamaha-webmusic.github.io/webmusicplatform/app/components/wm-skelton/)
 
 ## Requirement
  - Web Server
