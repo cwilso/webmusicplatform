@@ -514,7 +514,6 @@ Distributed under the MIT License (license terms are at http://opensource.org/li
           }
           document.addEventListener("webkitfullscreenchange", handleFSevent.bind(this), false);
           function handleFSevent(event) {
-              console.log(event);
               var elem=document.getElementById(event.target.id);
               if( (document.webkitFullscreenElement && document.webkitFullscreenElement != null) ) {
                   if(!elem.classList.contains("fullscreenSize")) elem.className+=" fullscreenSize";
