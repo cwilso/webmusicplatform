@@ -43,7 +43,7 @@ Event、Methodの説明以下の通りです。
 -->
                                                                
 <link rel="import" href="../wm-platform/wm-resourcemanager.html">
-<polymer-element name="hogehoge" extends="wm-resourcemanager" attributes="">
+<polymer-element name="hogehoge" extends="wm-resourcemanager">
   <template>
     <style type="text/css">
     .outerline {
@@ -55,16 +55,16 @@ Event、Methodの説明以下の通りです。
       border-radius:0px;
       border:0px solid #dddddd;
     }
-    <!-- write css inside shdowwom here-->
+    <!-- write css here -->
     </style>
     <div id="outerline" class="outerline">
-      <!-- your html here-->
+      <!-- your html here -->
     </div>
   </template>
   <script type="text/javascript">
   Polymer('hogehoge', {
       /**
-       * ComponentがLoadされた時に`console.log`でTag名を出力します。 
+       * Custom Element NodeがLoadされた時に`console.log`でTag名を出力します。 
        *
        * @method hello()
        * @required No
@@ -73,21 +73,21 @@ Event、Methodの説明以下の通りです。
           this.super();
       }
       /**
-       * Web Music Platform 上に Component を配置（追加）の準備段階で呼ばれます。
+       * Web Music Platform 上に Custom Element Node を配置（追加）の準備段階で呼ばれます。
        * Web Music Platform 上に表示されたいサイズを指定してください。|||
        * `return this.super();` とすれば `{"width":"auto", "height":"auto"}` を返せます。
        *
        * @method getComponentSize()
        * @required Yes
-       * @return {Object} |(|"width":"XXpx", "height":"XXpx"|)| の Format で返してください。
+       * @return {Object} |(|"width":XX, "height":XX|)| の Format で返してください。(XX の単位は px)
        */
       getComponentSize: function() {
           return this.super();
       },
       /**
-       * Web Music Platform 上に Component を配置（追加）と同時に呼ばれます。
-       * AudioContext を自 Component にセットすることを目的とした Method です。
-       * `this.super()` とすると自 Component の `this.ac` にセットできます。
+       * Web Music Platform 上に Custom Element Node を配置（追加）と同時に呼ばれます。
+       * AudioContext を自 Custom Element Node にセットすることを目的とした Method です。
+       * `this.super()` とすると自 Custom Element Node の `this.ac` にセットできます。
        *
        * @method setAudioContext(ac)
        * @required Yes
@@ -97,8 +97,8 @@ Event、Methodの説明以下の通りです。
           this.super([ac]);
       },
       /**
-       * Web Music Platform 上で自 Component の Output が他 Component と接続するときに呼ばれます。
-       * 接続する次 Component の入力 Node (Begininig-Node) を取得できるので自 Component の Output（End-Node）と接続してください。
+       * Web Music Platform 上で自 Custom Element Node の Output が他 Custom Element Node と接続するときに呼ばれます。
+       * 接続する次 Custom Element Node の入力 Node (Begininig-Node) を取得できるので自 Custom Element Node の Output（End-Node）と接続してください。
        * 
        * @method connectToNextNode(nn)
        * @required Yes
@@ -107,8 +107,8 @@ Event、Methodの説明以下の通りです。
       connectToNextNode: function(nn){
       },
       /**
-       * 接続している次 Component と自 Component を切断するときに呼ばれます。
-       * 自 Component と接続されていた Component を切断してください。
+       * 接続している次 Custom Element Node と自 Custom Element Node を切断するときに呼ばれます。
+       * 自 Custom Element Node と接続されていた Custom Element Node を切断してください。
        *
        * @method disconnectFromNextNode
        * @required Yes
@@ -116,8 +116,8 @@ Event、Methodの説明以下の通りです。
       disconnectFromNextNode: function(){
       },
       /**
-       * 自 Component に 他 Component との接続要求があった時に呼ばれます。
-       * 自 Component の入力 Node(Begining-Node)を返してください。
+       * 自 Custom Element Node に 他 Custom Element Node との接続要求があった時に呼ばれます。
+       * 自 Custom Element Node の入力 Node(Begining-Node)を返してください。
        *
        * @method getInputNode()
        * @required Yes
@@ -126,40 +126,11 @@ Event、Methodの説明以下の通りです。
        */
       getInputNode: function() {
       },
-      /**
-       * 自 Component と次 Component が接続された（自分 Input の接続時）時に呼ばれます。
-       * 他 Component との接続をしてない状態では UI を無効にしたい場合に使います。
-       * （不要な場合、 Method 内を空白にしてください）
-       *
-       * @method enableControl()
-       * @required Yes
-       */
-      enableControl: function() {
+      setSize: function(event) {
       },
       /**
-       * 自 Component と前 Component が切断された（自分 Output の切断時）時に呼ばれます。
-       * 他 Component との接続をしてない状態では UI を無効にしたい場合に使います。
-       * （不要な場合、 Method 内を空白にしてください）
-       *
-       * @method disableControl()
-       * @required Yes
-       */
-      disableControl: function() {
-      },
-      /**
-       * NO (Component をフルスクリーンを有効にしている場合のみに必要)
-       *
-       * @method setSize(event)
-       * @required No
-       * @param event.detail.size {String} フルスクリーン時："full"、フルスクリーン解除時："single"
-       * @param event.detail.innerWidth {String} フルスクリーン時のスクリーンの幅が指定されます。
-       * @param event.detail.innerHeight {String} フルスクリーン時のスクリーンの高さが指定されます。
-       */
-      setSize: function() {
-      },
-      /**
-       * DOM Element を指定して、その Element 上の Drag 操作での Component の移動が中止されます。
-       * (Component 内に Drag で操作をしたいエレメント(スライダー等)がある場合に指定してください。)
+       * DOM Element を指定して、その Element 上の Drag 操作での Custom Element Node の移動が中止されます。
+       * (Custom Element Node 内に Drag で操作をしたいエレメント(スライダー等)がある場合に指定してください。)
        *
        * @method setIgnoreDragging([elems])
        * @required No
@@ -168,16 +139,16 @@ Event、Methodの説明以下の通りです。
       setIgnoreDragging: function([elems]){
       },
       /**
-       * 自 Component の ID 名を Object にセットします。
+       * 自 Custom Element Node の ID 名を Object にセットします。
        *
        * @method setSelfIdName(idName)
        * @required No
        * @param idName {String} 
        */
       setSelfIdName: function(idName) {
+          this.super([idName]); 
       },
       ready: function(){
-
       },
   });
   </script>
@@ -206,7 +177,7 @@ if(event.detail.slaves.contains(self.idName+"_p")) {
 -->
 
 <!--
-Component のサイズを変更し接続点が変化した場合にこの Event を Fire することで、接続点と接続線を動かすことができます。
+Custom Element Node のサイズを変更し接続点が変化した場合にこの Event を Fire することで、接続点と接続線を動かすことができます。
 
 注：ready 内に設置してください。
 

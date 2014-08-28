@@ -26,11 +26,13 @@ Difference is Web Music Platfrom is supporting...
 
 ## Instructions for Users & Developers
 ### Users' instruction
-[Tutorial](https://docs.google.com/document/d/1HyhPZdjDEGgbCCvprlfWsQ8ZCgcbZoR3HEmACrWyEJg/edit): Play audio file and display its waveform on oscilloscope.  
+ - [Tutorial](https://docs.google.com/document/d/1HyhPZdjDEGgbCCvprlfWsQ8ZCgcbZoR3HEmACrWyEJg/edit): Play audio file and display its waveform on oscilloscope.  
 
 ### Developers' instruction
-Tutorial: TBD  
-[API Document(Japanese)](https://yamaha-webmusic.github.io/webmusicplatform/app/components/wm-skelton/)
+ - [Tutorial](https://docs.google.com/document/d/13UAp3MAUnVQUoS7H-cYRWHM-j2gYq03HaL3eIuq6H7w/edit): Develop gain node and regist to the platform.
+ ([Completed file](https://yamaha-webmusic.github.io/webmusicplatform/app/components/wm-tutorial/wm-tutorial00.html))
+ - [Skelton template](https://yamaha-webmusic.github.io/webmusicplatform/app/components/wm-skelton/wm-skelton_template.html)
+ - [API Document (Japanese)](https://yamaha-webmusic.github.io/webmusicplatform/app/components/wm-skelton/)
 
 ## Requirement
  - Web Server

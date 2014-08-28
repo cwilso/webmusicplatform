@@ -1,0 +1,110 @@
+<!--
+Copyright (c) 2014 Yamaha Corporation. All rights reserved.
+Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+-->
+<link rel="import" href="../wm-platform/wm-resourcemanager.html">
+<polymer-element name="wm-tutorialgain" extends="wm-resourcemanager">
+  <template>
+    <style type="text/css">
+    .outerline {
+      position:relative; // change conector's z-index to outerline, element, connector
+      float:left; 
+      margin:0px;
+      padding:10px; 
+      background-color:#ffffff; 
+      border-radius:0px;
+      border:0px solid #dddddd; 
+    }
+    .gainChange {
+      padding:20px 0px 10px 20px;
+    }
+    .windowMode {
+      margin-left: 25px;
+      font-size: 1.5em;
+    }
+    .msg-indicator {
+      position:absolute;
+      top:0px;
+      left:8px;
+      margin:10px 3px 10px 0px;
+      padding:0px;
+      background-color:rgba(221, 221, 221, 1);
+      float:left;
+      width:18px;
+      height:18px;
+      border-radius:50%;
+      transition:0.1s;
+      font-size:10px;
+    }
+    .on {
+      -webkit-animation: indicator 1s linear 0 infinite alternate;
+    }
+    @-webkit-keyframes indicator {
+        0% { background-color: rgba(225, 225, 255, 1); }
+      100% { background-color: rgba(92, 207 ,92, 1); }
+    }
+    </style>
+    <div id="outerline" class="outerline">
+      <div id="msg-indicator" class="msg-indicator"><span id="windowMode" class="windowMode">single</span></div>
+      <div><paper-slider id="gainChange" min="0" max="1" value="0.5" step="0.05" class="gainChange"></paper-slider></div>      
+    </div>
+  </template>
+  <script type="text/javascript">
+  Polymer('wm-tutorialgain', {
+      gainNode: null,
+      hello: function() {
+          this.super();
+      },
+      getComponentSize: function() {
+          return {"width":300, "height":"auto"}; 
+          //return this.super(); 
+      },
+      setAudioContext: function(ac) {
+          this.super([ac]);
+          if(this.gainNode==null) {
+              this.gainNode=this.ac.createGain();
+              this.gainNode.gain.value = this.$["gainChange"].value;
+          }
+      },
+      connectToNextNode: function(nn){
+          this.gainNode.connect(nn);
+      },
+      disconnectFromNextNode: function(){
+          this.gainNode.disconnect();
+      },
+      getInputNode: function() {
+          return this.gainNode;
+      },
+      setSize: function(event) {
+          this.$["windowMode"].innerHTML=event.detail.size;
+      },
+      setIgnoreDragging: function(elems) {
+          this.super([elems]);
+      },
+      setSelfIdName: function(idName) {
+          this.super([idName]); 
+      },
+      ready: function(){
+          this.hello();
+          var self=this;
+          // update gain value when gain slider is changed
+          this.$["gainChange"].addEventListener("change", function(event){
+              self.gainNode.gain.value=event.target.value;
+          });
+
+          // ignore to move this Node during changing slider
+          this.setIgnoreDragging([this.$["gainChange"]]);
+
+          // this fire when audio source in upstream is started  
+          document.addEventListener("masterStart", function(event){
+              self.$["msg-indicator"].className+=" on";
+          });
+          // this fire when audio source in upstream is stopped  
+          document.addEventListener("masterStop", function(event){
+              self.$["msg-indicator"].className=self.$["msg-indicator"].className.replace(" on", "");
+          });
+
+      },
+  });
+  </script>
+</polymer>

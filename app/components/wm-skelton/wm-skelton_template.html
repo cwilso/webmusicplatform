@@ -1,0 +1,129 @@
+<!--
+Copyright (c) 2014 Yamaha Corporation. All rights reserved.
+Distributed under the MIT License (license terms are at http://opensource.org/licenses/MIT).
+-->
+<link rel="import" href="../wm-platform/wm-resourcemanager.html">
+<polymer-element name="hogehoge" extends="wm-resourcemanager">
+  <template>
+    <style type="text/css">
+    .outerline {
+      position:relative; /* important：DO NOT specify "z-index" */
+      float:left;
+      margin:0px;
+      padding:10px;
+      background-color:#ffffff;
+      border-radius:0px;
+      border:0px solid #dddddd;
+    }
+    <!-- write css here -->
+    </style>
+    <div id="outerline" class="outerline">
+      <!-- your html here -->
+    </div>
+  </template>
+  <script type="text/javascript">
+  Polymer('hogehoge', {
+      /**
+       * Display tag name in console when the Custom Element Node is Loaded. 
+       *
+       * @method hello()
+       * @required No
+       */
+      hello: function() {
+          this.super();
+      }
+      /**
+       * Be called during preparing Custom Element Node.
+       * Retun desired size of Custom Element Node in object format.|||
+       * To set `return this.super();`, platfrom retuns `{"width":"auto", "height":"auto"}` automatically.
+       *
+       * @method getComponentSize()
+       * @required Yes
+       * @return {Object} |(|"width":XX, "height":XX|)| <- format (unit of XX is px)
+       */
+      getComponentSize: function() {
+          return this.super();
+      },
+      /**
+       * Be called during preparing Custom Element Node.
+       * This method is to set audioContext to myself(this Node).  
+       * Leave default code `this.super()` will set audioContext into `this.ac`.
+       *
+       * @method setAudioContext(ac)
+       * @required Yes
+       * @param nn {Object} 
+       */
+      setAudioContext: function(ac) {
+          this.super([ac]);
+      },
+      /**
+       * Be called when output of myself(this Node) connect to other input of Custom Element Node as a variable `nn`.
+       * Connect `nn` is the next node(web audio node), so connect `nn` to end-node of myself.
+       * 
+       * @method connectToNextNode(nn)
+       * @required Yes
+       * @param nn {Object} 
+       */
+      connectToNextNode: function(nn){
+      },
+      /**
+       * Be called when to disconnected from next node.
+       * Disconnect from nodes which are connected by connectToNextNode() method.
+       *
+       * @method disconnectFromNextNode
+       * @required Yes
+       */
+      disconnectFromNextNode: function(){
+      },
+      /**
+       * Be called when connection request from other node occur.
+       * Return begining node(web audio node) of myself.
+       *
+       * @method getInputNode()
+       * @required Yes
+       * @param nn {Object} 
+       * @return {Object}  
+       */
+      getInputNode: function() {
+      },
+      /**
+       * Be called when the Node myself is changed into full-screen mode.
+       * [Note]  set configuration entry of `"allow_fullscreen": true` in `wm-platform/wm-platform-manifest.json`.
+       *
+       * @method setSize(event)
+       * @required No
+       * @param event.detail.size {String} enter fullscreen mode："full"、exit fullscreen mode："single"
+       * @param event.detail.innerWidth {String} width of window size in fullscreen mode
+       * @param event.detail.innerHeight {String} height of window size in fullscreen mode
+       */
+      setSize: function(event) {
+      },
+      /**
+       * Call this method if the Node has UI elements(e.g. slider, knob, etc) which are required "dragging" to control them.
+       *
+       * @method setIgnoreDragging([elems])
+       * @required No
+       * @param elems {Array} (e.g. elems=[elemA, elemB, ...] (elemA, elemB must be DOM)) 
+       */
+      setIgnoreDragging: function([elems]){
+      },
+      /**
+       * Be called during preparing Custom Element Node.
+       * set ID name in the Web Music Platfrom 
+       * Leave default code `this.super([idName])` will set idName into `this.idName`.
+       * `this.idName` is to use when platform need to specify and get this Node(object).
+       *
+       * @method setSelfIdName(idName)
+       * @required No
+       * @param idName {String} 
+       */
+      setSelfIdName: function(idName) {
+          this.super([idName]); 
+      },
+      ready: function(){
+      },
+  });
+  </script>
+</polymer>
+
+
