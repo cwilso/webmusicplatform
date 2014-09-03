@@ -1,0 +1,18 @@
+<html>
+  <head>
+    <script type="text/javascript" src="../js/platform.js"></script>
+    <link rel="import" href="../components/wm-ddaudiosource/wm-ddaudiosource.html">
+  </head>
+  <body>
+    <wm-ddaudiosource id="source"></wm-ddaudiosource>
+    <script type="text/javascript">
+    window.addEventListener("polymer-ready", function(event){
+        var ac=new AudioContext();
+        var das=document.getElementById("source");
+
+        das.setAudioContext(ac);
+        das.connectToNextNode(ac.destination);
+    });
+    </script>
+  </body>
+</html>

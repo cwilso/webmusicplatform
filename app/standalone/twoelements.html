@@ -1,0 +1,24 @@
+<html>
+  <head>
+    <script type="text/javascript" src="../js/platform.js"></script>
+    <link rel="import" href="../components/wm-ddaudiosource/wm-ddaudiosource.html">
+    <link rel="import" href="../components/wm-tutorial/wm-tutorialgain.html">
+  </head>
+  <body>
+    <wm-ddaudiosource id="source"></wm-ddaudiosource>
+    <wm-tutorialgain id="gain"></wm-tutorialgain>
+    <script type="text/javascript">
+    window.addEventListener("polymer-ready", function(event){
+        var ac=new AudioContext();
+        var das=document.getElementById("source");
+        var gain=document.getElementById("gain");
+
+        das.setAudioContext(ac);
+        gain.setAudioContext(ac);
+
+        das.connectToNextNode(gain.getInputNode());
+        gain.connectToNextNode(ac.destination);
+    });
+    </script>
+  </body>
+</html>
