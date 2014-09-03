@@ -64,6 +64,13 @@ Distributed under the MIT License (license terms are at http://opensource.org/li
           if(this.gainNode==null) {
               this.gainNode=this.ac.createGain();
               this.gainNode.gain.value = this.$["gainChange"].value;
+
+              var self=this;
+              // update gain value when gain slider is changed
+              this.$["gainChange"].addEventListener("change", function(event){
+                  self.gainNode.gain.value=event.target.value;
+              });
+
           }
       },
       connectToNextNode: function(nn){
@@ -87,10 +94,6 @@ Distributed under the MIT License (license terms are at http://opensource.org/li
       ready: function(){
           this.hello();
           var self=this;
-          // update gain value when gain slider is changed
-          this.$["gainChange"].addEventListener("change", function(event){
-              self.gainNode.gain.value=event.target.value;
-          });
 
           // ignore to move this Node during changing slider
           this.setIgnoreDragging([this.$["gainChange"]]);
